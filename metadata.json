@@ -1,0 +1,5 @@
+{
+  "name": "PolyJungle Swing",
+  "description": "A low-poly 2D physics swinging game where a monkey traverses the Amazon jungle avoiding obstacles using special abilities.",
+  "requestFramePermissions": []
+}
