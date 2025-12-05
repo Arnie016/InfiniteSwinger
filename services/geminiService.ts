@@ -1,6 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.API_KEY || '';
+import { GoogleGenAI } from "@google/genai";
 
 const FALLBACK_QUOTES = [
   "The jungle is silent, but your spirit speaks loud.",
@@ -12,10 +11,10 @@ const FALLBACK_QUOTES = [
 ];
 
 export const getJungleQuote = async (score: number, distance: number): Promise<string> => {
-  if (!API_KEY) return "The jungle is silent... (Configure API Key)";
+  if (!process.env.API_KEY) return "The jungle is silent... (Configure API Key)";
 
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are a wise and slightly sarcastic old jungle spirit. A monkey just finished a run in the jungle swinging game.
