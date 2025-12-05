@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameState, AbilityType, Vector2, Entity, Enemy, Particle, SaveData, ShopItem, BiomeType, FloatingText, SkillChainState, SkillRank, WeatherType, LevelConfig, TutorialState, TutorialStep } from './types';
 import { getJungleQuote } from './services/geminiService';
-import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, MousePointer2, Move, Wind, Eye, CloudRain, Snowflake, CloudFog, Leaf, Pause, PlayCircle, Flame, TrendingUp, AlertTriangle, Crosshair, Clock, Flower, Shield, Heart, Trophy, Star, Activity, Sparkles, Hourglass, Gem, Ghost, Lock, Map, CheckCircle, BookOpen, Mountain, Anchor, Scroll, Shirt, Hammer, X, Sprout, Feather, LifeBuoy, Keyboard, PauseCircle, LogOut, Egg } from 'lucide-react';
+import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, MousePointer2, Move, Wind, Eye, CloudRain, Snowflake, CloudFog, Leaf, Pause, PlayCircle, Flame, TrendingUp, AlertTriangle, Crosshair, Clock, Flower, Shield, Heart, Trophy, Star, Activity, Sparkles, Hourglass, Gem, Ghost, Lock, Map, CheckCircle, BookOpen, Mountain, Anchor, Scroll, Shirt, Hammer, X, Sprout, Feather, LifeBuoy, Keyboard, PauseCircle, LogOut, Egg, Trash2 } from 'lucide-react';
 
 // --- CONSTANTS ---
 const GRAVITY = 0.5; 
@@ -75,7 +75,7 @@ const LEVELS: LevelConfig[] = [
 const DEFAULT_SAVE: SaveData = {
   totalTokens: 0,
   highScore: 0,
-  maxLevelReached: 10, // Unlocked all levels for testing
+  maxLevelReached: 1, // Start at level 1 normally
   skins: ['default'],
   equippedSkin: 'default',
   upgrades: {
@@ -239,7 +239,7 @@ export default function App() {
     const saved = localStorage.getItem('polyjungle_save_v2'); 
     if (saved) {
         const parsed = JSON.parse(saved);
-        parsed.maxLevelReached = 10; // FORCE UNLOCK ALL LEVELS for testing
+        // Schema Migration: Check for new fields
         if (parsed.upgrades.launchBoost === undefined) parsed.upgrades.launchBoost = 0;
         if (parsed.upgrades.airControl === undefined) parsed.upgrades.airControl = 0;
         if (parsed.upgrades.safetyNet === undefined) parsed.upgrades.safetyNet = 0;
@@ -2403,6 +2403,15 @@ export default function App() {
         const y = e.clientY - rect.top;
 
         if (gameState === GameState.MENU) {
+             // Reset Button Click
+             if (x > 20 && x < 180 && y > 20 && y < 60) {
+                 if (confirm("Reset all progress?")) {
+                     localStorage.removeItem('polyjungle_save_v2');
+                     window.location.reload();
+                 }
+                 return;
+             }
+
              LEVELS.forEach((level, i) => {
                  const lx = 100 + (i * (CANVAS_WIDTH - 200) / (LEVELS.length - 1));
                  const ly = CANVAS_HEIGHT - 100 - (i * (CANVAS_HEIGHT - 150) / (LEVELS.length - 1)) + Math.sin(i * 1.5) * 50;
@@ -2470,6 +2479,14 @@ export default function App() {
       
       {/* MENU OVERLAY */}
       {gameState === GameState.MENU && (
+         <>
+         {/* Reset Button */}
+         <button 
+            className="absolute top-5 left-5 px-4 py-2 bg-red-900/50 hover:bg-red-800 text-red-200 border border-red-700 rounded flex items-center gap-2 text-sm z-50 transition-colors"
+         >
+             <Trash2 size={16} /> RESET DATA
+         </button>
+
          <div className="absolute bottom-10 right-10 flex flex-col gap-3 items-end">
               <div className="bg-black/60 p-4 rounded-lg text-white border border-gray-700 max-w-sm backdrop-blur-sm text-right">
                   <h3 className="text-xl font-bold text-green-400 mb-1">THE GREAT ASCENT</h3>
@@ -2484,6 +2501,7 @@ export default function App() {
                   </button>
               </div>
          </div>
+         </>
       )}
       
       {/* MAP OVERLAY ICONS */}
