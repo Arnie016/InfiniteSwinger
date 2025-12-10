@@ -11,7 +11,7 @@ export enum GameState {
 export enum AbilityType {
   PUNCH = 'PUNCH',
   LASER = 'LASER',
-  BANANA = 'BANANA', // We will treat this as ROCKET in the UI/Logic now
+  BANANA = 'BANANA', // Treated as ROCKET
   SLOW_MO = 'SLOW_MO'
 }
 
@@ -30,7 +30,7 @@ export interface LevelConfig {
     description: string;
     targetDistance: number; // in meters (1m = 20px)
     biome: BiomeType;
-    difficulty: number; // 0-10, affects spawn rates
+    difficulty: number;
     allowedEnemies: Enemy['enemyType'][];
     allowedWeather: WeatherType[];
     tutorialType: TutorialType;
@@ -43,26 +43,26 @@ export interface Entity {
   height: number;
   color: string;
   type: 'tree' | 'enemy' | 'obstacle' | 'coin' | 'ground' | 'branch' | 'lake' | 'lava' | 'mushroom' | 'powerup' | 'apple' | 'vine' | 'updraft' | 'lilypad' | 'sand' | 'flower' | 'projectile' | 'web' | 'portal' | 'stalactite' | 'nest' | 'waterfall' | 'water_pocket';
-  polyPoints?: Vector2[]; // For low poly rendering
-  health?: number; // For destructible trees
+  polyPoints?: Vector2[];
+  health?: number;
   biome?: BiomeType;
-  powerupType?: 'length' | 'force'; // For powerup entities
+  powerupType?: 'length' | 'force';
   flowerType?: 'red' | 'blue';
-  angle?: number; // For angled branches
-  stability?: number; // For branches breaking
-  isBroken?: boolean; // If the branch has snapped
-  breakVelocity?: Vector2; // Falling animation
+  angle?: number;
+  stability?: number;
+  isBroken?: boolean;
+  breakVelocity?: Vector2;
 }
 
 export interface Enemy extends Entity {
   velocity: Vector2;
   health: number;
   enemyType: 'bird' | 'snake' | 'spider' | 'crocodile' | 'bonus_bird' | 'bat' | 'eagle' | 'slug' | 'troll';
-  state?: number; // For animation/movement phases
-  anchorY?: number; // For spiders (original height)
-  anchorX?: number; // For trolls (pivot point)
-  swingAngle?: number; // For trolls
-  attackTimer?: number; // For eagle shooting
+  state?: number;
+  anchorY?: number;
+  anchorX?: number;
+  swingAngle?: number;
+  attackTimer?: number;
 }
 
 export interface Particle {
@@ -72,7 +72,7 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
-  type?: 'snow' | 'rain' | 'leaf' | 'spark' | 'text' | 'ash' | 'wind' | 'speed_line' | 'wood' | 'eyes' | 'cloud_shadow' | 'upgrade_spark' | 'spore' | 'egg_shell' | 'bubble';
+  type?: 'snow' | 'rain' | 'leaf' | 'spark' | 'text' | 'ash' | 'wind' | 'speed_line' | 'wood' | 'eyes' | 'cloud_shadow' | 'upgrade_spark' | 'spore' | 'egg_shell' | 'bubble' | 'ant';
 }
 
 export interface FloatingText {
@@ -92,15 +92,15 @@ export interface SaveData {
   skins: string[];
   equippedSkin: string;
   upgrades: {
-    ropeLength: number; // Level 1-5
-    swingForce: number; // Level 1-5
-    armor: number; // Level 0-3
-    magnetism: number; // Level 0-5
-    feverDuration: number; // Level 0-5
-    luck: number; // Level 0-5
-    launchBoost: number; // Level 0-5 (NEW)
-    airControl: number; // Level 0-5 (NEW)
-    safetyNet: number; // Level 0-1 (NEW)
+    ropeLength: number;
+    swingForce: number;
+    armor: number;
+    magnetism: number;
+    feverDuration: number;
+    luck: number;
+    launchBoost: number;
+    airControl: number;
+    safetyNet: number;
   };
 }
 
@@ -113,13 +113,11 @@ export interface ShopItem {
   upgradeKey?: keyof SaveData['upgrades'];
   maxLevel?: number;
   icon?: any;
-  // Tree Visuals
-  x?: number; // 0-100% position
-  y?: number; // 0-100% position
-  parents?: string[]; // IDs of parent nodes
+  x?: number;
+  y?: number;
+  parents?: string[];
 }
 
-// --- SKILL CHAIN TYPES ---
 export type SkillRank = 'GROOVIN' | 'WILD' | 'FEROCIOUS' | 'MYTHIC' | 'LEGEND';
 
 export interface SkillEvent {
@@ -138,11 +136,8 @@ export interface SkillChainState {
   rank: SkillRank;
 }
 
-// --- TUTORIAL TYPES ---
 export type TutorialStep = 
-  // Level 1 Basic
   'WELCOME' | 'GRAPPLE' | 'MOMENTUM' | 'SWING' | 'JUMP' | 'BRANCH_INFO' | 'COMPLETED' |
-  // Level 2 Advanced
   'L2_INTRO' | 'L2_MOMENTUM' | 'L2_BRANCH' | 'L2_DODGE' | 'L2_ABILITY';
 
 export interface TutorialState {
@@ -152,4 +147,23 @@ export interface TutorialState {
     message: string;
     targetPos?: Vector2; 
     timer?: number;
+}
+
+export interface PhysicsLesson {
+  concept: string;
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+  funFact: string;
+  diagram?: {
+      title: string;
+      vectors: { label: string, start: number[], end: number[], color: string }[];
+      labels: { text: string, position: number[] }[];
+  };
+  gameTweak?: {
+      parameter: string;
+      value: number;
+      message: string;
+  };
 }
