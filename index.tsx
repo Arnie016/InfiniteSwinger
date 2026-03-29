@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App';
+import './styles.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -8,6 +10,9 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+registerSW({ immediate: true });
+
 root.render(
   <React.StrictMode>
     <App />

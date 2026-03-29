@@ -1,0 +1,322 @@
+@import '@fontsource/space-grotesk/latin.css';
+@import '@fontsource/rajdhani/latin.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --atlas-bg: #020617;
+  --atlas-surface: rgba(8, 13, 22, 0.7);
+  --atlas-surface-strong: rgba(6, 10, 17, 0.88);
+  --atlas-surface-soft: rgba(11, 18, 28, 0.5);
+  --atlas-border: rgba(255, 255, 255, 0.14);
+  --atlas-border-soft: rgba(255, 255, 255, 0.08);
+  --atlas-rim: rgba(255, 255, 255, 0.22);
+  --atlas-shadow: rgba(0, 0, 0, 0.34);
+  --atlas-shadow-deep: rgba(0, 0, 0, 0.46);
+  --atlas-highlight-soft: rgba(255, 255, 255, 0.08);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(34, 197, 94, 0.08), transparent 25%),
+    radial-gradient(circle at 78% 16%, rgba(245, 158, 11, 0.06), transparent 22%),
+    linear-gradient(180deg, #08111d 0%, #050b14 45%, #020617 100%);
+  color: #f8fafc;
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-ui {
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.font-display {
+  font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-surface {
+  border: 1px solid var(--atlas-border);
+  background:
+    linear-gradient(180deg, rgba(13, 19, 29, 0.82), rgba(7, 11, 18, 0.74)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 46%);
+  box-shadow:
+    0 1px 0 var(--atlas-highlight-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 26px var(--atlas-shadow),
+    0 18px 38px rgba(0, 0, 0, 0.14);
+}
+
+.atlas-surface-strong {
+  border: 1px solid var(--atlas-border);
+  background:
+    linear-gradient(180deg, rgba(10, 15, 25, 0.9), rgba(5, 8, 14, 0.84)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 42%);
+  box-shadow:
+    0 1px 0 var(--atlas-highlight-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 16px 38px rgba(0, 0, 0, 0.4),
+    0 28px 52px rgba(0, 0, 0, 0.18);
+}
+
+.atlas-surface-soft {
+  border: 1px solid var(--atlas-border-soft);
+  background:
+    linear-gradient(180deg, rgba(14, 20, 32, 0.58), rgba(8, 13, 22, 0.48)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04), transparent 44%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.22),
+    0 16px 28px rgba(0, 0, 0, 0.08);
+}
+
+.atlas-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(9, 14, 22, 0.9), rgba(5, 8, 15, 0.82)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.atlas-title {
+  font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.atlas-map-title {
+  font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-map-label {
+  font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-body {
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.55;
+}
+
+.atlas-panel-copy {
+  line-height: 1.6;
+}
+
+.atlas-elevated {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+    0 14px 34px rgba(0, 0, 0, 0.28),
+    0 28px 58px rgba(0, 0, 0, 0.12),
+    0 2px 0 rgba(255, 255, 255, 0.02);
+}
+
+.atlas-preview-float {
+  animation: atlas-float 2.8s ease-in-out infinite;
+}
+
+.atlas-preview-rope {
+  transform-origin: 50% 0%;
+}
+
+.atlas-preview-rope-core {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.16);
+}
+
+.atlas-preview-rope-vine {
+  animation: atlas-rope-vine 2.4s ease-in-out infinite;
+}
+
+.atlas-preview-rope-braid {
+  animation: atlas-rope-braid 2s ease-in-out infinite;
+}
+
+.atlas-preview-rope-chain {
+  animation: atlas-rope-chain 1.7s ease-in-out infinite;
+}
+
+.atlas-preview-rope-silk {
+  animation: atlas-rope-silk 2.6s ease-in-out infinite;
+}
+
+.atlas-preview-glint {
+  animation: atlas-glint 2s linear infinite;
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes atlas-float {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -6px);
+  }
+}
+
+@keyframes atlas-rope-vine {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(-50%) rotate(7deg);
+  }
+}
+
+@keyframes atlas-rope-braid {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-3deg) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) rotate(4deg) scaleY(1.04);
+  }
+}
+
+@keyframes atlas-rope-chain {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-2deg);
+  }
+  50% {
+    transform: translateX(-50%) rotate(2deg) translateY(2px);
+  }
+}
+
+@keyframes atlas-rope-silk {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-8deg) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) rotate(10deg) scaleY(1.05);
+  }
+}
+
+@keyframes atlas-glint {
+  0% {
+    opacity: 0.1;
+    transform: translateX(-50%) scale(0.75);
+  }
+  50% {
+    opacity: 0.45;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0.1;
+    transform: translateX(-50%) scale(0.75);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2.2s ease-in-out infinite;
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+}
+
+.slide-in-from-top-4 {
+  animation-name: slide-in-top;
+}
+
+.slide-in-from-right-8 {
+  animation-name: slide-in-right;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+@keyframes slide-in-top {
+  from {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

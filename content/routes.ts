@@ -1,0 +1,88 @@
+import { RouteScriptRegistry } from '../types';
+
+export const ROUTE_SCRIPTS: RouteScriptRegistry = {
+  5: {
+    beatWidth: 5200,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'cave_fork', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'low', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 28 }], recoveryAnchors: true, telegraph: 'dive', label: 'Forked start' },
+      { kind: 'hazard', anchorPattern: 'cave_drop', hazards: [{ kind: 'enemy', enemyType: 'troll', lane: 'center', count: 1, telegraph: 'gate' }, { kind: 'enemy', enemyType: 'bat', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'low', count: 4, spread: 22 }], recoveryAnchors: true, telegraph: 'gate', label: 'Troll gate' },
+      { kind: 'reward', anchorPattern: 'cave_fork', hazards: [{ kind: 'enemy', enemyType: 'bat', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 7, spread: 30 }], recoveryAnchors: true, telegraph: 'cross', label: 'Wet reward shelf' },
+      { kind: 'checkpoint', anchorPattern: 'cave_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'risk', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 20 }], recoveryAnchors: true, telegraph: 'dive', label: 'First redeploy' },
+      { kind: 'hazard', anchorPattern: 'cave_drop', hazards: [{ kind: 'enemy', enemyType: 'troll', lane: 'center', count: 1, telegraph: 'gate' }, { kind: 'enemy', enemyType: 'bat', lane: 'high', count: 2, spacing: 120, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'low', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'gate', label: 'Gate and dive' },
+      { kind: 'speed', anchorPattern: 'cave_fork', hazards: [{ kind: 'enemy', enemyType: 'bat', lane: 'risk', count: 2, spacing: 160, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 4, spread: 26 }], recoveryAnchors: true, telegraph: 'cross', label: 'Fast upper fork' },
+      { kind: 'reward', anchorPattern: 'cave_fork', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 30 }], recoveryAnchors: true, telegraph: 'dive', label: 'Ore line' },
+      { kind: 'checkpoint', anchorPattern: 'cave_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'troll', lane: 'risk', count: 1, telegraph: 'gate' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 20 }], recoveryAnchors: true, telegraph: 'gate', label: 'Second redeploy' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'enemy', enemyType: 'troll', lane: 'center', count: 1, telegraph: 'gate' }, { kind: 'enemy', enemyType: 'bat', lane: 'high', count: 2, spacing: 180, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'gate', label: 'Valley break' },
+    ],
+  },
+  6: {
+    beatWidth: 6000,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'lava_bridge', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'risk', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'burst', label: 'Cooling bridge' },
+      { kind: 'hazard', anchorPattern: 'lava_burst', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'center', count: 2, spacing: 240, telegraph: 'burst' }, { kind: 'enemy', enemyType: 'bat', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'risk', count: 4, spread: 22 }], recoveryAnchors: true, telegraph: 'burst', label: 'Burst window' },
+      { kind: 'reward', anchorPattern: 'lava_bridge', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 7, spread: 30 }], recoveryAnchors: true, telegraph: 'cross', label: 'Hot detour' },
+      { kind: 'checkpoint', anchorPattern: 'lava_checkpoint', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'risk', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'burst', label: 'Cooling tower' },
+      { kind: 'hazard', anchorPattern: 'lava_burst', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'center', count: 2, spacing: 240, telegraph: 'burst' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'burst', label: 'Lake break' },
+      { kind: 'speed', anchorPattern: 'lava_bridge', hazards: [{ kind: 'enemy', enemyType: 'bat', lane: 'risk', count: 2, spacing: 150, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 4, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Sling line' },
+      { kind: 'reward', anchorPattern: 'lava_bridge', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'low', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 28 }], recoveryAnchors: true, telegraph: 'burst', label: 'Heat bonus' },
+      { kind: 'checkpoint', anchorPattern: 'lava_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'cross', label: 'Magma relay' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'center', count: 2, spacing: 260, telegraph: 'burst' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'burst', label: 'Fire break' },
+    ],
+  },
+  7: {
+    beatWidth: 7000,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'slope_climb', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'low', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'dive', label: 'Cliff opener' },
+      { kind: 'speed', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 5, spread: 28 }], recoveryAnchors: true, telegraph: 'cross', label: 'Launch seam' },
+      { kind: 'hazard', anchorPattern: 'slope_climb', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 4, spread: 22 }], recoveryAnchors: true, telegraph: 'cross', label: 'Wind pinch' },
+      { kind: 'checkpoint', anchorPattern: 'slope_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'risk', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'dive', label: 'Cliff rest' },
+      { kind: 'speed', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 2, spacing: 170, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 6, spread: 26 }], recoveryAnchors: true, telegraph: 'cross', label: 'Diagonal burst' },
+      { kind: 'reward', anchorPattern: 'slope_climb', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'low', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 30 }], recoveryAnchors: true, telegraph: 'dive', label: 'Ore ladder' },
+      { kind: 'hazard', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }, { kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'risk', count: 4, spread: 22 }], recoveryAnchors: true, telegraph: 'cross', label: 'Wind break' },
+      { kind: 'checkpoint', anchorPattern: 'slope_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'cross', label: 'Second ledge' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 2, spacing: 180, telegraph: 'cross' }, { kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Summit drive' },
+    ],
+  },
+  8: {
+    beatWidth: 7600,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'ash_weave', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'risk', count: 1, telegraph: 'gust' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'gust', label: 'Grey veil' },
+      { kind: 'hazard', anchorPattern: 'ash_gust', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 260, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'bat', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'risk', count: 4, spread: 20 }], recoveryAnchors: true, telegraph: 'gust', label: 'Storm wall' },
+      { kind: 'reward', anchorPattern: 'ash_weave', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 7, spread: 28 }], recoveryAnchors: true, telegraph: 'cross', label: 'Visible bonus lane' },
+      { kind: 'checkpoint', anchorPattern: 'ash_checkpoint', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'risk', count: 1, telegraph: 'gust' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'gust', label: 'Storm marker' },
+      { kind: 'hazard', anchorPattern: 'ash_gust', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 260, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'gust', label: 'Ash pulse' },
+      { kind: 'speed', anchorPattern: 'ash_weave', hazards: [{ kind: 'enemy', enemyType: 'bat', lane: 'high', count: 2, spacing: 150, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Blind rush' },
+      { kind: 'reward', anchorPattern: 'ash_weave', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'low', count: 1, telegraph: 'gust' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 30 }], recoveryAnchors: true, telegraph: 'gust', label: 'Cinder line' },
+      { kind: 'checkpoint', anchorPattern: 'ash_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'cross', label: 'Storm relay' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 240, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'gust', label: 'Clear the storm' },
+    ],
+  },
+  9: {
+    beatWidth: 8200,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'slope_climb', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'cross', label: 'Summit foothold' },
+      { kind: 'speed', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 2, spacing: 160, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 6, spread: 26 }], recoveryAnchors: true, telegraph: 'cross', label: 'Sky line' },
+      { kind: 'hazard', anchorPattern: 'ash_gust', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 1, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 4, spread: 20 }], recoveryAnchors: true, telegraph: 'gust', label: 'Ridge squall' },
+      { kind: 'checkpoint', anchorPattern: 'slope_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'cross', label: 'Sky rest' },
+      { kind: 'reward', anchorPattern: 'slope_climb', hazards: [{ kind: 'enemy', enemyType: 'spider', lane: 'low', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 30 }], recoveryAnchors: true, telegraph: 'dive', label: 'Ore traverse' },
+      { kind: 'hazard', anchorPattern: 'ash_gust', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 220, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'risk', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'gust', label: 'Peak shear' },
+      { kind: 'speed', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 2, spacing: 140, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Edge launch' },
+      { kind: 'checkpoint', anchorPattern: 'ash_checkpoint', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'risk', count: 1, telegraph: 'gust' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'gust', label: 'Summit relay' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 240, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 2, spacing: 170, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Peak break' },
+    ],
+  },
+  10: {
+    beatWidth: 8600,
+    beats: [
+      { kind: 'recovery', anchorPattern: 'lava_bridge', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'risk', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'burst', label: 'Core entry' },
+      { kind: 'hazard', anchorPattern: 'lava_burst', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'center', count: 2, spacing: 220, telegraph: 'burst' }, { kind: 'enemy', enemyType: 'troll', lane: 'center', count: 1, telegraph: 'gate' }], rewards: [{ kind: 'coins', lane: 'risk', count: 4, spread: 20 }], recoveryAnchors: true, telegraph: 'burst', label: 'Molten gate' },
+      { kind: 'reward', anchorPattern: 'ash_weave', hazards: [{ kind: 'enemy', enemyType: 'bat', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 7, spread: 28 }], recoveryAnchors: true, telegraph: 'cross', label: 'Cinder route' },
+      { kind: 'checkpoint', anchorPattern: 'lava_checkpoint', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'risk', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'burst', label: 'Core relay' },
+      { kind: 'hazard', anchorPattern: 'ash_gust', hazards: [{ kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 2, spacing: 220, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'spider', lane: 'mid', count: 1, telegraph: 'dive' }], rewards: [{ kind: 'coins', lane: 'reward', count: 5, spread: 22 }], recoveryAnchors: true, telegraph: 'gust', label: 'Core storm' },
+      { kind: 'speed', anchorPattern: 'slope_launch', hazards: [{ kind: 'enemy', enemyType: 'eagle', lane: 'risk', count: 2, spacing: 150, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'high', count: 5, spread: 24 }], recoveryAnchors: true, telegraph: 'cross', label: 'Core launch' },
+      { kind: 'reward', anchorPattern: 'lava_bridge', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'low', count: 1, telegraph: 'burst' }], rewards: [{ kind: 'coins', lane: 'reward', count: 8, spread: 30 }], recoveryAnchors: true, telegraph: 'burst', label: 'Vault line' },
+      { kind: 'checkpoint', anchorPattern: 'ash_checkpoint', hazards: [{ kind: 'enemy', enemyType: 'troll', lane: 'risk', count: 1, telegraph: 'gate' }], rewards: [{ kind: 'coins', lane: 'safe', count: 4, spread: 18 }], recoveryAnchors: true, telegraph: 'gate', label: 'Last relay' },
+      { kind: 'finale', anchorPattern: 'final_gauntlet', hazards: [{ kind: 'entity', entityType: 'geyser', lane: 'center', count: 2, spacing: 220, telegraph: 'burst' }, { kind: 'entity', entityType: 'ash_gust', lane: 'center', count: 1, telegraph: 'gust' }, { kind: 'enemy', enemyType: 'eagle', lane: 'high', count: 1, telegraph: 'cross' }], rewards: [{ kind: 'coins', lane: 'reward', count: 6, spread: 24 }], recoveryAnchors: true, telegraph: 'burst', label: 'Core break' },
+    ],
+  },
+};

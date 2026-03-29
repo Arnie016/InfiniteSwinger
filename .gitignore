@@ -11,6 +11,13 @@ node_modules
 dist
 dist-ssr
 *.local
+output/
+external/
+memory.md
+progress.md
+metadata.json
+*.tgz
+art_prompts.md
 
 # Editor directories and files
 .vscode/*
