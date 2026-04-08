@@ -2,6 +2,7 @@ export { LEVELS } from './levels';
 export { ROUTE_SCRIPTS } from './routes';
 export { SHOP_ITEMS } from './shop';
 export { INTRO_STORY_SEQUENCE, LEVEL_AUDIO_PROFILES, MAP_REGIONS } from './story';
+export { STORY_CAST, STORY_CAST_ORDER, STORY_SCENE_PALETTE, getStoryCharacterProfile } from './storyCast';
 export {
   BIOMES,
   BIOME_SCENE_PROFILES,

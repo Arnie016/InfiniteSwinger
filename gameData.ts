@@ -29,6 +29,7 @@ export const DEFAULT_SAVE: SaveData = {
   selectedMoodPreset: 'Balanced',
   customSwingLabConfig: null,
   achievements: [],
+  runHistory: [],
   lastSelectedLevelId: 1,
   settings: {
     masterVolume: 1,

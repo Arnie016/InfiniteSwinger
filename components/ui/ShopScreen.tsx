@@ -27,6 +27,7 @@ type Props = {
   onBuyItem: (item: ShopItem) => void;
   onEquipSkin: (skinId: string) => void;
   onEquipRopeType: (ropeType: string) => void;
+  initialSelectedItemId?: string | null;
 };
 
 const accentClasses: Record<PurchaseReceipt['accent'], string> = {
@@ -323,6 +324,7 @@ export function ShopScreen({
   onBuyItem,
   onEquipSkin,
   onEquipRopeType,
+  initialSelectedItemId,
 }: Props) {
   const filteredItems = useMemo(
     () =>
@@ -346,6 +348,7 @@ export function ShopScreen({
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(filteredItems[0]?.id ?? null);
   const [selectedGroup, setSelectedGroup] = useState<string>(availableGroups[0] ?? '');
+  const [showRecommendationPulse, setShowRecommendationPulse] = useState(false);
 
   useEffect(() => {
     setSelectedItemId((current) => {
@@ -353,6 +356,28 @@ export function ShopScreen({
       return filteredItems[0]?.id ?? null;
     });
   }, [filteredItems]);
+
+  useEffect(() => {
+    if (!initialSelectedItemId) return;
+    const target = filteredItems.find((item) => item.id === initialSelectedItemId);
+    if (!target) return;
+    setShowRecommendationPulse(true);
+    setSelectedItemId(target.id);
+    const targetGroup = target.presentationGroup;
+    if (targetGroup && availableGroups.includes(targetGroup)) {
+      setSelectedGroup(targetGroup);
+    }
+  }, [availableGroups, filteredItems, initialSelectedItemId]);
+
+  useEffect(() => {
+    if (!showRecommendationPulse) return;
+    const timeout = window.setTimeout(() => setShowRecommendationPulse(false), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [showRecommendationPulse]);
+
+  const stopRecommendationPulse = () => {
+    if (showRecommendationPulse) setShowRecommendationPulse(false);
+  };
 
   useEffect(() => {
     setSelectedGroup((current) => (availableGroups.includes(current) ? current : availableGroups[0] ?? ''));
@@ -516,18 +541,39 @@ export function ShopScreen({
                     const state = getItemState(item);
                     const theme = getShopTheme(item);
                     const isSelected = selectedItem?.id === item.id;
+                    const isRecommended = item.id === initialSelectedItemId && isSelected && showRecommendationPulse;
 
                     return (
                       <button
                         key={item.id}
-                        onClick={() => setSelectedItemId(item.id)}
-                        onMouseEnter={() => setSelectedItemId(item.id)}
-                        className={`w-[248px] snap-start shrink-0 rounded-[1.65rem] border p-4 text-left transition-all ${
+                        onClick={() => {
+                          stopRecommendationPulse();
+                          setSelectedItemId(item.id);
+                        }}
+                        onMouseEnter={() => {
+                          stopRecommendationPulse();
+                          setSelectedItemId(item.id);
+                        }}
+                        className={`relative w-[248px] snap-start shrink-0 rounded-[1.65rem] border p-4 text-left transition-all ${
                           isSelected
                             ? 'border-emerald-300/45 bg-emerald-500/14 shadow-lg shadow-emerald-950/25'
                             : 'border-white/8 bg-slate-900/72 hover:border-emerald-200/18 hover:bg-slate-900/88'
+                        } ${
+                          isRecommended
+                            ? 'animate-pulse ring-2 ring-emerald-200/80 shadow-emerald-200/60 shadow-lg'
+                            : ''
                         }`}
                       >
+                        {isRecommended ? (
+                          <>
+                            <span className="pointer-events-none absolute inset-0 rounded-[1.65rem] bg-emerald-200/10 blur-xl" />
+                            <span className="pointer-events-none absolute -inset-2 rounded-[2rem] border border-emerald-200/25 animate-ping opacity-75" />
+                            <span className="pointer-events-none absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-100">
+                              <Sparkles size={12} />
+                              Recommended
+                            </span>
+                          </>
+                        ) : null}
                         <div className="flex items-start justify-between gap-3">
                           <ShopGlyph item={item} theme={theme} className="h-12 w-12" size={24} />
                           <div className={`atlas-chip rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}>

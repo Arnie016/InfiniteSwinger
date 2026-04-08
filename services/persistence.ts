@@ -1,6 +1,6 @@
 import localforage from 'localforage';
 
-import { LevelResult, PlayerMoodPreset, SaveBackupV1, SaveData, SwingLabConfig } from '../types';
+import { LevelResult, PlayerMoodPreset, RunHistoryEntry, SaveBackupV1, SaveData, SwingLabConfig } from '../types';
 import { SAVE_DATA_VERSION } from '../engine/config';
 import { withDerivedProgression } from '../engine/playerProfile';
 import { sanitizeSwingLabConfig } from '../engine/swingLab';
@@ -118,6 +118,27 @@ const normalizeLevelResult = (raw: unknown): LevelResult | null => {
   };
 };
 
+const normalizeRunHistoryEntry = (raw: unknown): RunHistoryEntry | null => {
+  if (!isObject(raw)) return null;
+
+  const levelId = getNumber(raw.levelId, -1);
+  const elapsedMs = getNumber(raw.elapsedMs, -1);
+  const levelName = getString(raw.levelName, '');
+
+  if (levelId <= 0 || elapsedMs < 0) return null;
+
+  return {
+    score: getNumber(raw.score, 0),
+    levelId,
+    levelName: levelName || `Level ${levelId}`,
+    isWin: raw.isWin === true,
+    elapsedMs,
+    tokens: getNumber(raw.tokens, 0),
+    livesLeft: Math.max(0, getNumber(raw.livesLeft, 0)),
+    completedAt: getString(raw.completedAt, new Date().toISOString()),
+  };
+};
+
 export const normalizeSaveData = (raw: unknown, fallback: SaveData): SaveData => {
   if (!isObject(raw)) return fallback;
 
@@ -153,6 +174,11 @@ export const normalizeSaveData = (raw: unknown, fallback: SaveData): SaveData =>
       Array.isArray(raw.achievements) && raw.achievements.every((entry): entry is string => typeof entry === 'string')
         ? raw.achievements
         : fallback.achievements,
+    runHistory: Array.isArray(raw.runHistory)
+      ? raw.runHistory
+          .map((entry) => normalizeRunHistoryEntry(entry))
+          .filter((entry): entry is RunHistoryEntry => entry !== null)
+      : fallback.runHistory,
     lastSelectedLevelId: Math.max(1, getNumber(raw.lastSelectedLevelId, fallback.lastSelectedLevelId)),
     settings: {
       masterVolume: Math.max(0, Math.min(1, getNumber(settings.masterVolume, fallback.settings.masterVolume))),

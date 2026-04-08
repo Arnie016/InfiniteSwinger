@@ -58,6 +58,7 @@ export type StoryRevealAction =
   | 'show_goal';
 export type StoryRevealScope = 'camp' | 'segment' | 'region' | 'full_route';
 export type CameraEasing = 'linear' | 'easeOut' | 'easeInOut';
+export type StoryCastId = 'nara' | 'ivo' | 'pell' | 'suri' | 'chorus' | 'lyra' | 'kellan';
 export type PlayerMoodPreset = 'Relaxed' | 'Balanced' | 'Aggressive' | 'Precision' | 'Custom';
 export type SettingSafetyState = 'Safe' | 'Caution' | 'Unstable';
 export type ShopPresentationGroup = 'Rope Types' | 'Rope Control' | 'Launch & Recovery' | 'Survival & Utility' | 'Cosmetics';
@@ -237,6 +238,36 @@ export interface FloatingText {
   size: number;
 }
 
+export interface RunHistoryEntry {
+  score: number;
+  levelId: number;
+  levelName: string;
+  isWin: boolean;
+  elapsedMs: number;
+  tokens: number;
+  livesLeft: number;
+  completedAt: string;
+}
+
+export interface FeaturedRouteCupBenchmark extends RunHistoryEntry {
+  playerLabel: string;
+}
+
+export interface FeaturedRouteCup {
+  levelId: number;
+  levelName: string;
+  title: string;
+  detail: string;
+  statusLabel: string;
+  countdownLabel: string;
+  targetLabel: string;
+  tone: 'emerald' | 'amber' | 'cyan' | 'rose';
+  progressPercent: number;
+  targetScore: number | null;
+  localBest: RunHistoryEntry | null;
+  rivalBest: FeaturedRouteCupBenchmark | null;
+}
+
 export interface SaveData {
   version: number;
   totalTokens: number;
@@ -250,6 +281,7 @@ export interface SaveData {
   selectedMoodPreset: PlayerMoodPreset;
   customSwingLabConfig: SwingLabConfig | null;
   achievements: string[];
+  runHistory: RunHistoryEntry[];
   lastSelectedLevelId: number;
   settings: GameSettings;
   levelResults: Record<string, LevelResult>;
@@ -317,17 +349,30 @@ export interface StoryCameraKeyframe {
   lingerMs?: number;
 }
 
+export type StoryPanelScene = 'camp' | 'floodline' | 'basin' | 'cave' | 'magma';
+
+export interface StoryPanelVisual {
+  scene: StoryPanelScene;
+  caption: string;
+  speaker: string;
+  accentWord?: string;
+  characterId?: StoryCastId;
+  supportCharacterId?: StoryCastId;
+}
+
 export interface StoryBeat {
   id: string;
   regionId: string;
   title: string;
   body: string;
   hint?: string;
+  kicker?: string;
   focusLevelId?: number;
   highlightLevelIds?: number[];
   revealLevels?: number[];
   revealScope?: StoryRevealScope;
   voiceCueId?: string | null;
+  visual?: StoryPanelVisual;
   cameraTarget?: {
     x: number;
     y: number;
@@ -499,6 +544,18 @@ export interface LevelResult {
   firstClearedAt: string | null;
   stars: number;
   clears: number;
+}
+
+export interface RunDebrief {
+  checkpointsSecured: number;
+  redeploys: number;
+  hazardHits: number;
+  jumpsUsed: number;
+  maxComboMultiplier: number;
+  maxComboRank: SkillRank;
+  maxComboScore: number;
+  peakSpeed: number;
+  usedSafetyNet: boolean;
 }
 
 export interface CheckpointState {

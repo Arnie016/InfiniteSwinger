@@ -1,10 +1,12 @@
 
 import React, { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
-import { GameState, AbilityType, Vector2, Entity, Enemy, Particle, SaveData, ShopItem, BiomeType, FloatingText, SkillChainState, SkillRank, WeatherType, LevelConfig, TutorialState, CheckpointState, GameSettings, LevelResult, RouteBeat, RouteLane, DebugFlags, PurchaseReceipt, SwingLabConfig, PlayerMoodPreset, MapRegion, SettingsTab, SaveBackupV1, VisualDensity } from './types';
+import { GameState, AbilityType, Vector2, Entity, Enemy, Particle, SaveData, ShopItem, BiomeType, FloatingText, SkillChainState, SkillRank, WeatherType, LevelConfig, TutorialState, CheckpointState, GameSettings, LevelResult, RouteBeat, RouteLane, DebugFlags, PurchaseReceipt, SwingLabConfig, PlayerMoodPreset, MapRegion, SettingsTab, SaveBackupV1, VisualDensity, RunDebrief, RunHistoryEntry, StoryBeat, StoryCastId, StoryPanelScene, FeaturedRouteCup } from './types';
 import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, MousePointer2, Move, Wind, Eye, CloudRain, Snowflake, CloudFog, Leaf, Pause, PlayCircle, TrendingUp, AlertTriangle, Crosshair, Clock, Flower, Shield, Heart, Trophy, Star, Activity, Sparkles, Hourglass, Gem, Ghost, Lock, Map, CheckCircle, BookOpen, Anchor, Scroll, Shirt, Hammer, X, Sprout, Feather, LifeBuoy, Keyboard, PauseCircle, LogOut, Egg, Trash2, Brain, ChevronDown, Lightbulb, Check, HelpCircle, ArrowRight, Volume2, VolumeX, Repeat, Book, Settings, Flag } from 'lucide-react';
 import { audioManager } from './services/audioManager';
 import { clearPersistedSaveData, createSaveBackup, loadSaveData, parseSaveBackup, persistSaveData } from './services/persistence';
 import { LandingScreen } from './components/ui/LandingScreen';
+import { StoryCastPortrait } from './components/ui/StoryCastPortrait';
+import { STORY_SCENE_PALETTE, getStoryCharacterProfile } from './content/storyCast';
 import { BIOMES, DEFAULT_SAVE, INTRO_STORY_SEQUENCE, LEVELS, MAP_REGIONS, ROUTE_SCRIPTS, SHOP_ITEMS, THEME_PROFILES } from './gameData';
 import { DEFAULT_DEBUG_FLAGS, DEFAULT_ENGINE_CONFIG } from './engine/config';
 import { getBundledMonkeySprite, pickMusicProfileForBiome, resolveAudioCueUrl } from './engine/assets';
@@ -21,6 +23,12 @@ const EndRunModal = lazy(() =>
 );
 const MenuScreen = lazy(() =>
     import('./components/ui/MenuScreen').then((module) => ({ default: module.MenuScreen })),
+);
+const ProgressSidebar = lazy(() =>
+    import('./components/ui/ProgressSidebar').then((module) => ({ default: module.ProgressSidebar })),
+);
+const LeaderboardScreen = lazy(() =>
+    import('./components/ui/LeaderboardScreen').then((module) => ({ default: module.LeaderboardScreen })),
 );
 const ShopScreen = lazy(() =>
     import('./components/ui/ShopScreen').then((module) => ({ default: module.ShopScreen })),
@@ -43,8 +51,8 @@ function SurfaceLoader({ label }: { label: string }) {
 // --- CONSTANTS ---
 const GRAVITY_BASE = DEFAULT_ENGINE_CONFIG.physics.gravity;
 const AIR_RESISTANCE = DEFAULT_ENGINE_CONFIG.physics.airResistance;
-const MAX_SPEED = DEFAULT_ENGINE_CONFIG.physics.maxSpeed; 
-const CEILING_LIMIT = Math.max(-220, DEFAULT_ENGINE_CONFIG.physics.ceilingLimit - 120); 
+const MAX_SPEED = DEFAULT_ENGINE_CONFIG.physics.maxSpeed;
+const CEILING_LIMIT = Math.max(-220, DEFAULT_ENGINE_CONFIG.physics.ceilingLimit - 120);
 const SPAWN_RATE_BASE = 300;
 const JUMP_MAX_CHARGES = 3;
 const JUMP_RECHARGE_SECONDS = 5;
@@ -53,12 +61,12 @@ const JUMP_POWER_PER_LEVEL = 0.42;
 const JUMP_COOLDOWN_REDUCTION_PER_LEVEL = 0.18;
 const CANVAS_WIDTH = DEFAULT_ENGINE_CONFIG.ui.canvasWidth;
 const CANVAS_HEIGHT = DEFAULT_ENGINE_CONFIG.ui.canvasHeight;
-const VOID_TIMER_MAX_SECONDS = 3.0; 
-const ROPE_BREAK_TIME_SECONDS = DEFAULT_ENGINE_CONFIG.rope.breakTimeSeconds; 
-const GRAPPLE_ASSIST_RADIUS = DEFAULT_ENGINE_CONFIG.rope.assistRadius; 
+const VOID_TIMER_MAX_SECONDS = 3.0;
+const ROPE_BREAK_TIME_SECONDS = DEFAULT_ENGINE_CONFIG.rope.breakTimeSeconds;
+const GRAPPLE_ASSIST_RADIUS = DEFAULT_ENGINE_CONFIG.rope.assistRadius;
 const MAX_LIVES = DEFAULT_ENGINE_CONFIG.ui.maxLives;
-const INVULNERABILITY_TIME = 60; 
-const CHAIN_TIMEOUT_FRAMES = 150; 
+const INVULNERABILITY_TIME = 60;
+const CHAIN_TIMEOUT_FRAMES = 150;
 const BASE_MULTIPLIER = 1.0;
 const MAX_MULTIPLIER = 5.0;
 const MASTER_MUSIC_VOLUME = DEFAULT_ENGINE_CONFIG.audio.masterMusicVolume;
@@ -91,6 +99,137 @@ const MENU_DRAG_THRESHOLD = 1;
 const MENU_DRAG_FRICTION = 0.88;
 const ATLAS_FRAME_LOW_MS = 24;
 const ATLAS_FRAME_MEDIUM_MS = 18;
+const MAX_ROUTE_DIFFICULTY = Math.max(...LEVELS.map((level) => level.difficulty), 1);
+const ROUTE_PROFILE_THRESHOLD = {
+    speedTemplateCap: 4 / MAX_ROUTE_DIFFICULTY,
+    microBranchCap: 3 / MAX_ROUTE_DIFFICULTY,
+    helperBranchCap: 4 / MAX_ROUTE_DIFFICULTY,
+    hazardBranchCap: 5 / MAX_ROUTE_DIFFICULTY,
+    lateRouteAidCap: 6 / MAX_ROUTE_DIFFICULTY,
+} as const;
+const ROUTE_DIFFICULTY_PROFILE = {
+    earlySupportCap: 3 / MAX_ROUTE_DIFFICULTY,
+    midGemCap: 5 / MAX_ROUTE_DIFFICULTY,
+    midEnemyCap: 4 / MAX_ROUTE_DIFFICULTY,
+    lateEnemyCap: 6 / MAX_ROUTE_DIFFICULTY,
+} as const;
+
+const getRouteProgress = (level: LevelConfig): number => {
+    return clamp(level.difficulty / MAX_ROUTE_DIFFICULTY, 0, 1);
+};
+
+const getRouteSpawnProfile = (level: LevelConfig) => {
+    const routeProgress = getRouteProgress(level);
+    return {
+        routeProgress,
+        spawnChance: clamp(0.22 + routeProgress * 0.72 + (routeProgress >= ROUTE_PROFILE_THRESHOLD.lateRouteAidCap ? 0.06 : 0), 0.22, 0.95),
+        allowEarlySupportVines: routeProgress <= ROUTE_DIFFICULTY_PROFILE.earlySupportCap,
+        includeMidGemBonus: routeProgress >= ROUTE_DIFFICULTY_PROFILE.midGemCap,
+        hasMidThreatWindow: routeProgress > ROUTE_DIFFICULTY_PROFILE.midEnemyCap,
+        hasLateThreatWindow: routeProgress > ROUTE_DIFFICULTY_PROFILE.lateEnemyCap,
+    };
+};
+
+type RouteSegmentTemplate = 'recovery' | 'speed' | 'vertical' | 'hazard' | 'gem';
+
+type EnemyWeight = {
+    enemyType: Enemy['enemyType'];
+    weight: number;
+};
+
+const ENEMY_BASE_WEIGHTS: Record<Enemy['enemyType'], number> = {
+    bird: 1.05,
+    bonus_bird: 0.55,
+    eagle: 0.45,
+    bat: 0.95,
+    snake: 0.9,
+    spider: 1.1,
+    crocodile: 0.8,
+    slug: 0.68,
+    troll: 0.58,
+};
+
+const buildRouteEnemyWeights = (
+    level: LevelConfig,
+    routeProgress: number,
+    routeTemplate: RouteSegmentTemplate,
+) => {
+    if (level.biome === 'JUNGLE') {
+        return [{ enemyType: 'bird' as const, weight: 1 }];
+    }
+
+    const allowedEnemies = level.allowedEnemies;
+    if (allowedEnemies.length === 0) {
+        return [];
+    }
+
+    const isVolcano = level.biome === 'VOLCANO';
+    const isSwamp = level.biome === 'SWAMP';
+    const isCave = level.biome === 'CAVE';
+    const isHazardRoute = routeTemplate === 'hazard';
+    const isSpeedRoute = routeTemplate === 'speed';
+    const isVerticalRoute = routeTemplate === 'vertical';
+
+    const latePhase = clamp((routeProgress - 0.42) / 0.58, 0, 1);
+    const baseAirBias = clamp(0.64 - routeProgress * 0.3, 0.22, 0.78);
+    const routeTemplateAirShift = isSpeedRoute ? 0.08 : isHazardRoute ? -0.1 : isVerticalRoute ? 0.06 : 0;
+    const biomeGroundBias =
+        isVolcano ? 0.16 : isCave ? 0.1 : isSwamp ? -0.08 : 0;
+    const airBias = clamp(
+        baseAirBias + routeTemplateAirShift + biomeGroundBias * -1 + latePhase * -0.16,
+        0.2,
+        0.85,
+    );
+    const groundBias = 1 - airBias;
+
+    const isLate = routeProgress > ROUTE_DIFFICULTY_PROFILE.lateEnemyCap;
+    const isMid = routeProgress > ROUTE_DIFFICULTY_PROFILE.midEnemyCap && !isLate;
+
+    const weightedEnemies = allowedEnemies.reduce<EnemyWeight[]>((entries, enemyType) => {
+        const baseWeight = ENEMY_BASE_WEIGHTS[enemyType];
+        const isAerial = enemyType === 'bird' || enemyType === 'bonus_bird' || enemyType === 'eagle' || enemyType === 'bat';
+        const isGround = enemyType === 'snake' || enemyType === 'spider' || enemyType === 'slug' || enemyType === 'crocodile' || enemyType === 'troll';
+        let finalWeight = baseWeight * (isAerial ? airBias : groundBias);
+
+        if (isVolcano && isGround) finalWeight *= 1.15;
+        if (isSwamp && isGround) finalWeight *= 1.16;
+        if (isCave && isGround && enemyType === 'spider') finalWeight *= 1.28;
+        if (isCave && isGround && enemyType === 'troll') finalWeight *= 1.16;
+        if (isHazardRoute && isGround) finalWeight *= isLate ? 1.35 : 1.22;
+        if (isMid && enemyType === 'snake') finalWeight *= 1.16;
+        if (isLate && enemyType === 'crocodile') finalWeight *= 1.22;
+        if (isLate && (enemyType === 'bat' || enemyType === 'bonus_bird')) finalWeight *= 0.82;
+
+        if (isSpeedRoute && isAerial) finalWeight *= 1.14;
+        if (isVerticalRoute && enemyType === 'eagle') finalWeight *= 1.22;
+
+        return finalWeight > 0 ? [...entries, { enemyType, weight: finalWeight }] : entries;
+    }, []);
+
+    const totalWeight = weightedEnemies.reduce((sum, entry) => sum + entry.weight, 0);
+    if (totalWeight <= 0) return [];
+    return weightedEnemies;
+};
+
+const pickWeighted = <T extends { weight: number }>(options: T[], randomValue: () => number): T | null => {
+    if (options.length === 0) return null;
+    const totalWeight = options.reduce((sum, option) => sum + Math.max(0, option.weight), 0);
+    if (totalWeight <= 0) return null;
+
+    const pick = randomValue() * totalWeight;
+    let cursor = 0;
+
+    for (let index = 0; index < options.length; index += 1) {
+        const current = options[index];
+        const safeWeight = Math.max(0, current.weight);
+        cursor += safeWeight;
+        if (pick <= cursor) {
+            return current;
+        }
+    }
+
+    return options[options.length - 1];
+};
 
 type AtlasQuality = 'low' | 'medium' | 'high';
 
@@ -117,6 +256,38 @@ type MusicProfile = {
 };
 
 const UI_PREFERENCES_KEY = 'polyjungle_ui_preferences_v1';
+const RECOMMENDATION_METRICS_KEY = 'polyjungle_recommendation_metrics_v1';
+const RECOMMENDATION_TREND_KEY = 'polyjungle_recommendation_trend_v1';
+const LEADERBOARD_COMMUNITY_STORAGE_KEY = 'polyjungle_leaderboard_community_v1';
+const LEADERBOARD_ALIAS_KEY = 'polyjungle_leaderboard_alias_v1';
+const LEADERBOARD_REMOTE_SOURCE_KEY = 'polyjungle_leaderboard_remote_source_v1';
+const LEADERBOARD_REMOTE_SYNC_AT_KEY = 'polyjungle_leaderboard_remote_sync_at_v1';
+const LEADERBOARD_SHARE_QUERY_KEY = 'board';
+const LEADERBOARD_ROUTE_QUERY_KEY = 'route';
+const LEADERBOARD_VIEW_QUERY_KEY = 'view';
+const LEADERBOARD_VIEW_LEADERBOARD = 'leaderboard';
+const LEADERBOARD_SHARE_VERSION = 1;
+const LEADERBOARD_REMOTE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const RECOMMENDATION_TREND_WINDOW_SIZE = 7;
+const RECOMMENDATION_TREND_HISTORY_SIZE = RECOMMENDATION_TREND_WINDOW_SIZE * 2;
+const LEADERBOARD_SHARE_LIMIT = 10;
+const COMMUNITY_BOARD_ENTRY_LIMIT = 80;
+const RUN_HISTORY_RECENT_LIMIT = 80;
+const RUN_HISTORY_BEST_PER_LEVEL_LIMIT = 3;
+const RUN_HISTORY_ARCHIVE_LIMIT = 120;
+const DEFAULT_BOARD_ALIAS = 'Swinger';
+const LEADERBOARD_DELIMITED_HEADERS = [
+    'playerLabel',
+    'levelId',
+    'levelName',
+    'score',
+    'tokens',
+    'livesLeft',
+    'isWin',
+    'elapsedMs',
+    'elapsed',
+    'completedAt',
+] as const;
 const ENEMY_LABELS: Record<Enemy['enemyType'], string> = {
     bird: 'Birds',
     snake: 'Snakes',
@@ -127,6 +298,1690 @@ const ENEMY_LABELS: Record<Enemy['enemyType'], string> = {
     eagle: 'Eagles',
     slug: 'Slugs',
     troll: 'Trolls',
+};
+
+type RecommendationTrace = {
+    itemId: string;
+    itemName: string;
+    levelId: number;
+    levelName: string;
+    offeredAt: number;
+    openedAt: number | null;
+};
+
+type RecommendationMetrics = {
+    offers: number;
+    opens: number;
+    purchases: number;
+    skips: number;
+    openDelayTotalMs: number;
+    openDelaySamples: number;
+    skipDelayTotalMs: number;
+    skipDelaySamples: number;
+    openToBuyTotalMs: number;
+    openToBuySamples: number;
+};
+
+type RecommendationTrendSample = {
+    runId: number;
+    outcome: 'win' | 'fail' | null;
+    offers: number;
+    opens: number;
+    purchases: number;
+    skips: number;
+    openDelayTotalMs: number;
+    openDelaySamples: number;
+    skipDelayTotalMs: number;
+    skipDelaySamples: number;
+    openToBuyTotalMs: number;
+    openToBuySamples: number;
+    completedAt: number;
+};
+
+type RecommendationTrendSummary = {
+    offers: number;
+    opens: number;
+    purchases: number;
+    skips: number;
+    openRatePercent: number | null;
+    buyRatePercent: number | null;
+    avgOpenDelaySeconds: number | null;
+    avgOpenToBuySeconds: number | null;
+    avgSkipDelaySeconds: number | null;
+    runSamples: number;
+};
+
+type CampaignChallenge = {
+    levelId: number | null;
+    title: string;
+    description: string;
+    note: string;
+    tone: 'emerald' | 'amber' | 'cyan';
+    progress: number;
+    target: number;
+};
+
+type FeaturedRouteCupRunOutcome = {
+    title: string;
+    description: string;
+    tone: 'emerald' | 'amber' | 'cyan' | 'rose';
+};
+
+type RouteRivalMarker = {
+    status: 'first-mark' | 'trailing' | 'leading' | 'tied';
+    label: string;
+    detail: string;
+    tone: {
+        fill: string;
+        stroke: string;
+        text: string;
+        glow: string;
+    };
+    isPriority: boolean;
+};
+
+type LeaderboardBoardEntry = RunHistoryEntry & {
+    playerLabel: string;
+    isLocal: boolean;
+};
+
+type LeaderboardSharePayload = {
+    version: number;
+    game: 'Infinite Swinger';
+    sharedAt: number;
+    alias: string;
+    entries: Array<
+        Pick<RunHistoryEntry, 'score' | 'levelId' | 'levelName' | 'isWin' | 'elapsedMs' | 'tokens' | 'livesLeft' | 'completedAt'> & {
+            playerLabel: string;
+        }
+    >;
+};
+
+type SidebarAchievement = {
+    id: string;
+    title: string;
+    detail: string;
+    progress: string;
+    unlocked: boolean;
+};
+
+type RunAchievementUnlock = Pick<SidebarAchievement, 'id' | 'title' | 'detail' | 'progress'>;
+
+type RunIntroBannerState = {
+    title: string;
+    subtitle: string;
+    kicker: string;
+    speaker: string;
+    accentWord: string;
+    scene: StoryPanelScene;
+    characterId?: StoryCastId;
+    supportCharacterId?: StoryCastId;
+    caption: string;
+    missionTitle: string;
+    missionDetail: string;
+    rivalStatus: string;
+    rivalDetail: string;
+};
+
+type IncomingRouteChallenge = {
+    levelId: number;
+    challengerAlias: string;
+};
+
+type ActiveRoutePressure = {
+    label: string;
+    title: string;
+    detail: string;
+    targetScore: number | null;
+    gapScore: number | null;
+    progressPercent: number;
+    tone: 'emerald' | 'cyan' | 'rose' | 'amber';
+};
+
+type ActiveFeaturedRoutePressure = ActiveRoutePressure & {
+    statusLabel: string;
+    countdownLabel: string;
+    targetLabel: string;
+};
+
+const getRoutePressureToneClass = (tone: ActiveRoutePressure['tone']) =>
+    tone === 'rose'
+        ? 'border-rose-200/20 bg-rose-500/10 text-rose-100'
+        : tone === 'cyan'
+            ? 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100'
+            : tone === 'amber'
+                ? 'border-amber-200/20 bg-amber-500/10 text-amber-100'
+                : 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+const readStringValue = (value: unknown, fallback = '') => (typeof value === 'string' && value.length > 0 ? value : fallback);
+const readBooleanValue = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback);
+const readStrictNumericValue = (value: unknown) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string') return null;
+
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const numeric = Number(trimmed.replace(/,/g, ''));
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+const findStoryBeatForLevel = (levelId: number): StoryBeat | null =>
+    INTRO_STORY_SEQUENCE.beats.find((beat) => beat.focusLevelId === levelId)
+    ?? INTRO_STORY_SEQUENCE.beats.find((beat) => beat.highlightLevelIds?.includes(levelId))
+    ?? null;
+
+const buildRunIntroBanner = (
+    level: LevelConfig,
+    saveData: SaveData,
+    communityBoardEntries: LeaderboardBoardEntry[],
+): RunIntroBannerState => {
+    const storyBeat = findStoryBeatForLevel(level.id);
+    const visual = storyBeat?.visual;
+    const localBest = saveData.runHistory
+        .filter((entry) => entry.levelId === level.id)
+        .sort((left, right) => right.score - left.score || right.tokens - left.tokens || right.livesLeft - left.livesLeft)[0] ?? null;
+    const rivalBest = communityBoardEntries
+        .filter((entry) => entry.levelId === level.id)
+        .sort((left, right) => right.score - left.score || right.tokens - left.tokens || right.livesLeft - left.livesLeft)[0] ?? null;
+
+    let missionTitle = localBest ? 'Beat your route best' : 'Post the first benchmark';
+    let missionDetail = localBest
+        ? `Target ${localBest.score + Math.max(40, Math.round(level.targetDistance * 0.035))} pts and keep the line cleaner through the finish.`
+        : `Land a clean clear on ${level.name} so this route finally gets a score to chase.`;
+    let rivalStatus = rivalBest ? 'Imported rival online' : 'Solo route';
+    let rivalDetail = rivalBest
+        ? `${rivalBest.playerLabel} holds ${rivalBest.score} pts on this lane.`
+        : 'No imported board yet. Share or import one to turn this route into a race.';
+
+    if (rivalBest && localBest) {
+        const gap = rivalBest.score - localBest.score;
+        if (gap > 0) {
+            missionTitle = `Close ${gap} pts on ${rivalBest.playerLabel}`;
+            missionDetail = `Your best is ${localBest.score}. Beat ${rivalBest.score} to steal the route lead before the checkpoint chain ends.`;
+            rivalStatus = 'Chasing rival';
+            rivalDetail = `${rivalBest.playerLabel} leads by ${gap} pts on this route.`;
+        } else if (gap < 0) {
+            missionTitle = `Defend your ${Math.abs(gap)} pt lead`;
+            missionDetail = `You own the route right now. Another clean run keeps ${rivalBest.playerLabel} behind and extends the margin.`;
+            rivalStatus = 'Route under control';
+            rivalDetail = `You lead ${rivalBest.playerLabel} by ${Math.abs(gap)} pts.`;
+        } else {
+            missionTitle = 'Break the deadlock';
+            missionDetail = `You and ${rivalBest.playerLabel} are tied at ${localBest.score}. Cleaner tokens or a faster finish decides the lane.`;
+            rivalStatus = 'Route tied';
+            rivalDetail = `${rivalBest.playerLabel} exactly matched your best run.`;
+        }
+    } else if (!rivalBest && localBest) {
+        rivalDetail = `Your standing route best is ${localBest.score} pts.`;
+    }
+
+    return {
+        title: `Level ${level.id} • ${level.name}`,
+        subtitle: storyBeat?.body.split('\n')[0] ?? level.description,
+        kicker: storyBeat?.kicker ?? `Route ${String(level.id).padStart(2, '0')}`,
+        speaker: visual?.speaker ?? 'Camp Log',
+        accentWord: visual?.accentWord ?? 'Launch',
+        scene: visual?.scene ?? (level.biome === 'VOLCANO' ? 'magma' : level.biome === 'CAVE' ? 'cave' : level.biome === 'SWAMP' ? 'basin' : level.id <= 2 ? 'camp' : 'floodline'),
+        characterId: visual?.characterId,
+        supportCharacterId: visual?.supportCharacterId,
+        caption: visual?.caption ?? level.description,
+        missionTitle,
+        missionDetail,
+        rivalStatus,
+        rivalDetail,
+    };
+};
+
+type RouteRivalSummary = {
+    importedRuns: number;
+    importedRoutes: number;
+    contestedRoutes: number;
+    leadCount: number;
+    trailCount: number;
+    tieCount: number;
+    firstMarkRoute: {
+        levelId: number;
+        levelName: string;
+        rivalBest: LeaderboardBoardEntry;
+    } | null;
+    closestDeficit: {
+        levelId: number;
+        levelName: string;
+        localBest: RunHistoryEntry;
+        rivalBest: LeaderboardBoardEntry;
+        gap: number;
+    } | null;
+    tiedRoute: {
+        levelId: number;
+        levelName: string;
+        rivalBest: LeaderboardBoardEntry;
+    } | null;
+};
+
+const buildRouteRivalSummary = (
+    localRunHistory: RunHistoryEntry[],
+    communityBoardEntries: LeaderboardBoardEntry[],
+    highestUnlockedLevel = LEVELS.length,
+): RouteRivalSummary => {
+    const unlockedLevelIds = new Set(
+        LEVELS.filter((level) => level.id <= highestUnlockedLevel).map((level) => level.id),
+    );
+    const levelNameLookup = new globalThis.Map<number, string>(
+        LEVELS.map((level) => [level.id, level.name]),
+    );
+    const localBestByLevel = new globalThis.Map<number, RunHistoryEntry>();
+    const rivalBestByLevel = new globalThis.Map<number, LeaderboardBoardEntry>();
+
+    localRunHistory.forEach((entry) => {
+        if (!unlockedLevelIds.has(entry.levelId)) return;
+        const previous = localBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            localBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    communityBoardEntries.forEach((entry) => {
+        if (!unlockedLevelIds.has(entry.levelId)) return;
+        const previous = rivalBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            rivalBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    let leadCount = 0;
+    let trailCount = 0;
+    let tieCount = 0;
+    let firstMarkRoute: RouteRivalSummary['firstMarkRoute'] = null;
+    let closestDeficit: RouteRivalSummary['closestDeficit'] = null;
+    let tiedRoute: RouteRivalSummary['tiedRoute'] = null;
+
+    rivalBestByLevel.forEach((rivalBest, levelId) => {
+        const localBest = localBestByLevel.get(levelId) ?? null;
+        const levelName = levelNameLookup.get(levelId) ?? rivalBest.levelName ?? `Level ${levelId}`;
+
+        if (!localBest) {
+            if (!firstMarkRoute) {
+                firstMarkRoute = { levelId, levelName, rivalBest };
+            }
+            return;
+        }
+
+        const gap = rivalBest.score - localBest.score;
+        if (gap > 0) {
+            trailCount += 1;
+            if (!closestDeficit || gap < closestDeficit.gap) {
+                closestDeficit = { levelId, levelName, localBest, rivalBest, gap };
+            }
+            return;
+        }
+
+        if (gap < 0) {
+            leadCount += 1;
+            return;
+        }
+
+        tieCount += 1;
+        if (!tiedRoute) {
+            tiedRoute = { levelId, levelName, rivalBest };
+        }
+    });
+
+    return {
+        importedRuns: communityBoardEntries.length,
+        importedRoutes: rivalBestByLevel.size,
+        contestedRoutes: [...rivalBestByLevel.keys()].filter((levelId) => localBestByLevel.has(levelId)).length,
+        leadCount,
+        trailCount,
+        tieCount,
+        firstMarkRoute,
+        closestDeficit,
+        tiedRoute,
+    };
+};
+
+const buildRouteRivalMarkers = (
+    localRunHistory: RunHistoryEntry[],
+    communityBoardEntries: LeaderboardBoardEntry[],
+    highestUnlockedLevel: number,
+    priorityLevelId: number | null = null,
+) => {
+    const localBestByLevel = new globalThis.Map<number, RunHistoryEntry>();
+    const rivalBestByLevel = new globalThis.Map<number, LeaderboardBoardEntry>();
+
+    localRunHistory.forEach((entry) => {
+        if (entry.levelId > highestUnlockedLevel) return;
+        const previous = localBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            localBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    communityBoardEntries.forEach((entry) => {
+        if (entry.levelId > highestUnlockedLevel) return;
+        const previous = rivalBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            rivalBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    const markers = new globalThis.Map<number, RouteRivalMarker>();
+    const highlightLevelIds = new Set<number>();
+    if (priorityLevelId) highlightLevelIds.add(priorityLevelId);
+
+    rivalBestByLevel.forEach((rivalBest, levelId) => {
+        const localBest = localBestByLevel.get(levelId) ?? null;
+
+        if (!localBest) {
+            markers.set(levelId, {
+                status: 'first-mark',
+                label: 'Scout',
+                detail: `${rivalBest.playerLabel} posted first here.`,
+                tone: {
+                    fill: 'rgba(8, 145, 178, 0.86)',
+                    stroke: 'rgba(165, 243, 252, 0.92)',
+                    text: '#ecfeff',
+                    glow: 'rgba(34, 211, 238, 0.28)',
+                },
+                isPriority: highlightLevelIds.has(levelId),
+            });
+            return;
+        }
+
+        const gap = rivalBest.score - localBest.score;
+        if (gap > 0) {
+            markers.set(levelId, {
+                status: 'trailing',
+                label: `-${Math.min(999, gap)}`,
+                detail: `${rivalBest.playerLabel} leads by ${gap} pts.`,
+                tone: {
+                    fill: 'rgba(190, 24, 93, 0.86)',
+                    stroke: 'rgba(253, 164, 175, 0.9)',
+                    text: '#fff1f2',
+                    glow: 'rgba(244, 63, 94, 0.26)',
+                },
+                isPriority: true,
+            });
+            return;
+        }
+
+        if (gap < 0) {
+            markers.set(levelId, {
+                status: 'leading',
+                label: `+${Math.min(999, Math.abs(gap))}`,
+                detail: `You lead ${rivalBest.playerLabel} by ${Math.abs(gap)} pts.`,
+                tone: {
+                    fill: 'rgba(6, 95, 70, 0.86)',
+                    stroke: 'rgba(167, 243, 208, 0.9)',
+                    text: '#ecfdf5',
+                    glow: 'rgba(16, 185, 129, 0.22)',
+                },
+                isPriority: highlightLevelIds.has(levelId),
+            });
+            return;
+        }
+
+        markers.set(levelId, {
+            status: 'tied',
+            label: 'Tie',
+            detail: `${rivalBest.playerLabel} matched your score.`,
+            tone: {
+                fill: 'rgba(67, 56, 202, 0.84)',
+                stroke: 'rgba(196, 181, 253, 0.9)',
+                text: '#eef2ff',
+                glow: 'rgba(129, 140, 248, 0.24)',
+            },
+            isPriority: true,
+        });
+    });
+
+    return markers;
+};
+
+const resolveMenuAchievements = (
+    saveData: SaveData,
+    communityBoardEntries: LeaderboardBoardEntry[] = [],
+): SidebarAchievement[] => {
+    const totalClears = Object.values(saveData.levelResults).reduce((sum, result) => sum + Math.max(0, result?.clears ?? 0), 0);
+    const completedLevels = Object.values(saveData.levelResults).filter((result) => (result?.clears ?? 0) > 0).length;
+    const perfectRoutes = Object.values(saveData.levelResults).filter((result) => (result?.stars ?? 0) >= 3).length;
+    const finalLevelId = LEVELS.reduce((maxId, level) => Math.max(maxId, level.id), 0);
+    const branchExpansionTarget = Math.max(6, Math.ceil(Math.max(1, finalLevelId * 0.55)));
+    const finalCampClearCount = saveData.levelResults[finalLevelId]?.clears ?? 0;
+    const bestHighScore = saveData.highScore;
+    const winStreaks = computeRunWinStreaks(saveData.runHistory);
+    const rivalSummary = buildRouteRivalSummary(saveData.runHistory, communityBoardEntries);
+
+    return [
+        {
+            id: 'first-clear',
+            title: 'First Clear',
+            detail: 'Finish one route.',
+            progress: `${Math.min(1, totalClears)}/1`,
+            unlocked: totalClears >= 1,
+        },
+        {
+            id: 'route-runner',
+            title: 'Route Runner',
+            detail: 'Clear three routes total.',
+            progress: `${Math.min(3, totalClears)}/3`,
+            unlocked: totalClears >= 3,
+        },
+        {
+            id: 'branch-expansion',
+            title: 'Branch Expansion',
+            detail: `Clear ${branchExpansionTarget} routes for full branch confidence.`,
+            progress: `${Math.min(branchExpansionTarget, completedLevels)}/${branchExpansionTarget}`,
+            unlocked: completedLevels >= branchExpansionTarget,
+        },
+        {
+            id: 'star-master',
+            title: 'Star Master',
+            detail: 'Take any route to three stars.',
+            progress: `${Math.min(1, perfectRoutes)}/1 route`,
+            unlocked: perfectRoutes >= 1,
+        },
+        {
+            id: 'magma-clear',
+            title: 'Magma Clear',
+            detail: finalLevelId > 0 ? `Clear level ${finalLevelId} to expose the final camp.` : 'Clear the final camp to expose the final camp.',
+            progress: `${Math.min(1, finalCampClearCount)}/1`,
+            unlocked: finalCampClearCount >= 1,
+        },
+        {
+            id: 'high-score-burst',
+            title: 'High Score Burst',
+            detail: 'Push atlas score above 1000.',
+            progress: `${Math.min(bestHighScore, 1000)}/1000`,
+            unlocked: bestHighScore >= 1000,
+        },
+        {
+            id: 'branch-consistency',
+            title: 'Branch Consistency',
+            detail: 'Chain 5 clears without a failed route.',
+            progress: `${winStreaks.current}/5 (best ${winStreaks.best})`,
+            unlocked: winStreaks.best >= 5,
+        },
+        {
+            id: 'board-scout',
+            title: 'Board Scout',
+            detail: 'Import one rival runboard.',
+            progress: `${Math.min(1, rivalSummary.importedRuns > 0 ? 1 : 0)}/1`,
+            unlocked: rivalSummary.importedRuns > 0,
+        },
+        {
+            id: 'route-taker',
+            title: 'Route Taker',
+            detail: 'Lead one contested route against an imported board.',
+            progress: `${Math.min(1, rivalSummary.leadCount)}/1 route`,
+            unlocked: rivalSummary.leadCount >= 1,
+        },
+        {
+            id: 'crew-climber',
+            title: 'Crew Climber',
+            detail: 'Lead three contested routes at once.',
+            progress: `${Math.min(3, rivalSummary.leadCount)}/3 routes`,
+            unlocked: rivalSummary.leadCount >= 3,
+        },
+    ];
+};
+
+const computeRunWinStreaks = (entries: RunHistoryEntry[]) => {
+    const sorted = [...entries]
+        .map((entry) => ({
+            entry,
+            completedAt: Date.parse(entry.completedAt),
+        }))
+        .filter((sample) => Number.isFinite(sample.completedAt))
+        .sort((left, right) => right.completedAt - left.completedAt);
+
+    let current = 0;
+    for (let i = 0; i < sorted.length; i += 1) {
+        if (!sorted[i].entry.isWin) break;
+        current += 1;
+    }
+
+    let best = 0;
+    let running = 0;
+    sorted.forEach(({ entry }) => {
+        if (entry.isWin) {
+            running += 1;
+            best = Math.max(best, running);
+            return;
+        }
+        running = 0;
+    });
+
+    return { current, best };
+};
+
+const sortLeaderboardBoardEntries = (entries: LeaderboardBoardEntry[]) =>
+    entries.sort((left, right) => {
+        const scoreDiff = right.score - left.score;
+        if (scoreDiff !== 0) return scoreDiff;
+        const tokenDiff = right.tokens - left.tokens;
+        if (tokenDiff !== 0) return tokenDiff;
+        const lifeDiff = right.livesLeft - left.livesLeft;
+        if (lifeDiff !== 0) return lifeDiff;
+        const rightTime = Date.parse(right.completedAt);
+        const leftTime = Date.parse(left.completedAt);
+        return Number.isFinite(rightTime) && Number.isFinite(leftTime) ? rightTime - leftTime : 0;
+    });
+
+const normalizeBoardSharePayload = (raw: unknown): LeaderboardSharePayload | null => {
+    if (!isRecord(raw)) return null;
+    const version = Number(raw.version);
+    if (raw.game !== 'Infinite Swinger' || Number.isNaN(version) || version < 1 || !Array.isArray(raw.entries)) {
+        return null;
+    }
+
+    const normalized = {
+        version: Math.max(1, Math.min(99, version)),
+        game: 'Infinite Swinger' as const,
+        sharedAt: readNumericValue(raw.sharedAt, Date.now()),
+        alias: readStringValue(raw.alias, DEFAULT_BOARD_ALIAS),
+        entries: raw.entries
+            .map((entry) => {
+                if (!isRecord(entry)) return null;
+                const score = readNumericValue(entry.score, -1);
+                const levelId = readNumericValue(entry.levelId, -1);
+                const elapsedMs = readNumericValue(entry.elapsedMs, -1);
+                const tokens = readNumericValue(entry.tokens, 0);
+                const livesLeft = readNumericValue(entry.livesLeft, 0);
+
+                if (score < 0 || levelId <= 0 || elapsedMs < 0 || livesLeft < 0) return null;
+
+                return {
+                    score,
+                    levelId,
+                    levelName: readStringValue(entry.levelName, `Level ${levelId}`),
+                    isWin: readBooleanValue(entry.isWin, false),
+                    elapsedMs,
+                    tokens,
+                    livesLeft,
+                    completedAt: readStringValue(entry.completedAt, new Date().toISOString()),
+                    playerLabel: readStringValue(entry.playerLabel, DEFAULT_BOARD_ALIAS),
+                };
+            })
+            .filter((entry): entry is LeaderboardSharePayload['entries'][number] => entry !== null),
+    };
+
+    return normalized;
+};
+
+const buildCampaignChallenge = (
+    saveData: SaveData,
+    highestUnlockedLevel: number,
+    communityBoardEntries: LeaderboardBoardEntry[] = [],
+): CampaignChallenge => {
+    const unlockedLevels = LEVELS.filter((level) => level.id <= highestUnlockedLevel).map((level) => ({
+        level,
+        result: saveData.levelResults[String(level.id)],
+    }));
+    const rivalSummary = buildRouteRivalSummary(saveData.runHistory, communityBoardEntries, highestUnlockedLevel);
+
+    const firstUnclear = unlockedLevels.find((entry) => (entry.result?.clears ?? 0) === 0);
+    if (firstUnclear) {
+        return {
+            levelId: firstUnclear.level.id,
+            title: `Clear ${firstUnclear.level.name}`,
+            description: 'This branch is the next campaign step. Finish it to unlock the next atlas lane.',
+            note: `Camp target: Route ${firstUnclear.level.id}.`,
+            tone: 'amber',
+            progress: Math.min(1, Math.max(0, firstUnclear.result?.clears ?? 0)),
+            target: 1,
+        };
+    }
+
+    if (rivalSummary.closestDeficit) {
+        const { levelId, levelName, localBest, rivalBest, gap } = rivalSummary.closestDeficit;
+        return {
+            levelId,
+            title: `Take Back ${levelName}`,
+            description: `${rivalBest.playerLabel} leads this imported rivalry lane by ${gap} pts. One cleaner clear flips the route back into your column.`,
+            note: `Your best ${localBest.score} vs ${rivalBest.playerLabel} ${rivalBest.score}.`,
+            tone: 'cyan',
+            progress: Math.min(localBest.score, rivalBest.score + 1),
+            target: rivalBest.score + 1,
+        };
+    }
+
+    if (rivalSummary.firstMarkRoute) {
+        const { levelId, levelName, rivalBest } = rivalSummary.firstMarkRoute;
+        return {
+            levelId,
+            title: `Mark ${levelName}`,
+            description: `${rivalBest.playerLabel} already posted a run here. Put your first score on the board to activate the head-to-head route.`,
+            note: `Imported benchmark: ${rivalBest.score} pts on Route ${levelId}.`,
+            tone: 'amber',
+            progress: 0,
+            target: 1,
+        };
+    }
+
+    if (rivalSummary.tiedRoute) {
+        const { levelId, levelName, rivalBest } = rivalSummary.tiedRoute;
+        return {
+            levelId,
+            title: `Break The Tie On ${levelName}`,
+            description: `You and ${rivalBest.playerLabel} are dead even here. A cleaner token line or faster finish steals the route.`,
+            note: `Tie score: ${rivalBest.score} pts.`,
+            tone: 'cyan',
+            progress: 0,
+            target: 1,
+        };
+    }
+
+    const masteryGap = unlockedLevels.find(
+        (entry) => (entry.result?.stars ?? 0) < 3 && (entry.result?.clears ?? 0) > 0,
+    );
+    if (masteryGap) {
+        return {
+            levelId: masteryGap.level.id,
+            title: `${masteryGap.level.name} Mastery`,
+            description: 'Collect all stars on this route to stabilize unlock pacing and improve consistency.',
+            note: `Current stars: ${masteryGap.result?.stars ?? 0}/3.`,
+            tone: 'emerald',
+            progress: Math.min(3, Math.max(0, masteryGap.result?.stars ?? 0)),
+            target: 3,
+        };
+    }
+
+    const nextMilestone = Math.max(500, Math.ceil((Math.max(saveData.highScore, 1) + 1) / 500) * 500);
+    return {
+        levelId: null,
+        title: 'Atlas Milestone Sprint',
+        description:
+            'Hit a fresh score milestone to raise pressure, then use the gained consistency from your next clear race.',
+        note: `Current atlas best ${saveData.highScore} / ${nextMilestone} pts.`,
+        tone: 'cyan',
+        progress: Math.min(saveData.highScore, nextMilestone),
+        target: nextMilestone,
+    };
+};
+
+const encodeLeaderboardPayload = (payload: LeaderboardSharePayload) => {
+    const json = JSON.stringify(payload);
+    return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+const decodeLeaderboardPayload = (raw: string): LeaderboardSharePayload | null => {
+    try {
+        const safeBase64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+        const padLength = (4 - (safeBase64.length % 4)) % 4;
+        const padded = safeBase64 + '='.repeat(padLength);
+        const json = decodeURIComponent(escape(atob(padded)));
+        return normalizeBoardSharePayload(JSON.parse(json));
+    } catch {
+        return null;
+    }
+};
+
+const readCommunityBoardStorage = (): LeaderboardBoardEntry[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = window.localStorage.getItem(LEADERBOARD_COMMUNITY_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        const normalized = normalizeBoardSharePayload(parsed);
+
+        if (!normalized || normalized.version !== LEADERBOARD_SHARE_VERSION) return [];
+        return sortLeaderboardBoardEntries(
+            normalized.entries.map((entry) => ({
+                ...entry,
+                playerLabel: readStringValue(entry.playerLabel, DEFAULT_BOARD_ALIAS),
+                isLocal: false,
+            })),
+        );
+    } catch {
+        return [];
+    }
+};
+
+const escapeDelimitedField = (value: string, delimiter: string) => {
+    if (!value.includes(delimiter) && !/["\n\r]/.test(value)) return value;
+    return `"${value.replace(/"/g, '""')}"`;
+};
+
+const serializeBoardRowsToDelimitedText = (
+    rows: Array<RunHistoryEntry | LeaderboardBoardEntry>,
+    resolveAlias: (entry: RunHistoryEntry | LeaderboardBoardEntry) => string,
+    delimiter = ',',
+) => {
+    const headerRow = LEADERBOARD_DELIMITED_HEADERS.join(delimiter);
+    const bodyRows = rows.map((entry) =>
+        [
+            resolveAlias(entry),
+            String(entry.levelId),
+            entry.levelName,
+            String(entry.score),
+            String(entry.tokens),
+            String(entry.livesLeft),
+            entry.isWin ? 'WIN' : 'TRY',
+            String(entry.elapsedMs),
+            formatDurationMs(entry.elapsedMs),
+            entry.completedAt,
+        ]
+            .map((value) => escapeDelimitedField(value, delimiter))
+            .join(delimiter),
+    );
+
+    return [headerRow, ...bodyRows].join('\n');
+};
+
+const detectDelimitedBoardSeparator = (raw: string) => {
+    const sampleLine = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0) ?? '';
+    if (!sampleLine) return null;
+
+    const candidates = ['\t', ',', ';'] as const;
+    let detected: (typeof candidates)[number] | null = null;
+    let bestScore = 0;
+
+    candidates.forEach((candidate) => {
+        const score = sampleLine.split(candidate).length - 1;
+        if (score > bestScore) {
+            detected = candidate;
+            bestScore = score;
+        }
+    });
+
+    return bestScore > 0 ? detected : null;
+};
+
+const parseDelimitedBoardRow = (line: string, delimiter: string) => {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let index = 0; index < line.length; index += 1) {
+        const character = line[index];
+
+        if (character === '"') {
+            const nextCharacter = line[index + 1];
+            if (inQuotes && nextCharacter === '"') {
+                current += '"';
+                index += 1;
+                continue;
+            }
+
+            inQuotes = !inQuotes;
+            continue;
+        }
+
+        if (character === delimiter && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+            continue;
+        }
+
+        current += character;
+    }
+
+    values.push(current.trim());
+    return values;
+};
+
+const normalizeDelimitedBoardHeader = (value: string) => {
+    const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+    switch (normalized) {
+        case 'player':
+        case 'playerlabel':
+        case 'alias':
+        case 'crew':
+        case 'name':
+            return 'playerLabel' as const;
+        case 'levelid':
+        case 'routeid':
+        case 'level':
+            return 'levelId' as const;
+        case 'levelname':
+        case 'routename':
+        case 'route':
+        case 'stage':
+        case 'title':
+            return 'levelName' as const;
+        case 'score':
+        case 'points':
+        case 'pts':
+            return 'score' as const;
+        case 'tokens':
+        case 'coins':
+        case 'tk':
+            return 'tokens' as const;
+        case 'livesleft':
+        case 'lives':
+        case 'life':
+        case 'hp':
+            return 'livesLeft' as const;
+        case 'iswin':
+        case 'result':
+        case 'outcome':
+        case 'win':
+            return 'isWin' as const;
+        case 'elapsedms':
+        case 'durationms':
+        case 'timems':
+        case 'ms':
+            return 'elapsedMs' as const;
+        case 'elapsed':
+        case 'duration':
+        case 'time':
+            return 'elapsed' as const;
+        case 'completedat':
+        case 'timestamp':
+        case 'date':
+        case 'completed':
+        case 'finishedat':
+            return 'completedAt' as const;
+        default:
+            return null;
+    }
+};
+
+const parseImportedLevelId = (raw: string) => {
+    const numericMatch = raw.match(/-?\d+/);
+    if (!numericMatch) return null;
+
+    const levelId = Number.parseInt(numericMatch[0], 10);
+    return LEVELS.some((level) => level.id === levelId) ? levelId : null;
+};
+
+const parseImportedElapsedMs = (raw: string) => {
+    const numeric = readStrictNumericValue(raw);
+    if (numeric !== null) return Math.max(0, Math.round(numeric));
+
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    const secondsMatch = trimmed.match(/^(\d+(?:\.\d+)?)s$/i);
+    if (secondsMatch) {
+        return Math.max(0, Math.round(Number(secondsMatch[1]) * 1000));
+    }
+
+    const parts = trimmed.split(':');
+    if (parts.length < 2 || parts.length > 3) return null;
+
+    const lastPart = parts[parts.length - 1];
+    const [secondsText, millisecondsText = '0'] = lastPart.split('.');
+    const seconds = Number.parseInt(secondsText, 10);
+    const minutes = Number.parseInt(parts[parts.length - 2], 10);
+    const hours = parts.length === 3 ? Number.parseInt(parts[0], 10) : 0;
+
+    if (![hours, minutes, seconds].every((value) => Number.isFinite(value))) return null;
+
+    const normalizedMilliseconds = Number.parseInt(millisecondsText.padEnd(3, '0').slice(0, 3), 10);
+    if (!Number.isFinite(normalizedMilliseconds)) return null;
+
+    return (((hours * 60) + minutes) * 60 + seconds) * 1000 + normalizedMilliseconds;
+};
+
+const parseImportedOutcome = (raw: string) => {
+    const normalized = raw.trim().toLowerCase();
+    if (!normalized) return false;
+    return ['win', 'won', 'clear', 'cleared', 'true', '1', 'yes'].includes(normalized);
+};
+
+const parseDelimitedBoardEntries = (raw: string): LeaderboardBoardEntry[] => {
+    const delimiter = detectDelimitedBoardSeparator(raw);
+    if (!delimiter) return [];
+
+    const lines = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    if (lines.length === 0) return [];
+
+    const parsedRows = lines.map((line) => parseDelimitedBoardRow(line, delimiter));
+    const normalizedHeaderRow = parsedRows[0].map(normalizeDelimitedBoardHeader);
+    const recognizedHeaders = normalizedHeaderRow.filter((value) => value !== null).length;
+    const fallbackHeaderRow = [
+        'playerLabel',
+        'levelId',
+        'levelName',
+        'score',
+        'tokens',
+        'livesLeft',
+        'isWin',
+        'elapsedMs',
+        'completedAt',
+    ] as const;
+    const headerRow =
+        recognizedHeaders >= 3
+            ? normalizedHeaderRow
+            : parsedRows[0].map((_, index) => fallbackHeaderRow[index] ?? null);
+    const dataRows = recognizedHeaders >= 3 ? parsedRows.slice(1) : parsedRows;
+    const getColumnIndex = (key: (typeof LEADERBOARD_DELIMITED_HEADERS)[number]) =>
+        headerRow.findIndex((value) => value === key);
+    const getValueForRow = (cells: string[], key: (typeof LEADERBOARD_DELIMITED_HEADERS)[number]) => {
+        const index = getColumnIndex(key);
+        return index >= 0 ? cells[index] ?? '' : '';
+    };
+
+    return dataRows.reduce<LeaderboardBoardEntry[]>((entries, cells) => {
+        const levelId = parseImportedLevelId(getValueForRow(cells, 'levelId'));
+        const score = readStrictNumericValue(getValueForRow(cells, 'score'));
+        if (levelId === null || score === null) return entries;
+
+        const levelName =
+            readStringValue(getValueForRow(cells, 'levelName'), '')
+            || LEVELS.find((level) => level.id === levelId)?.name
+            || `Route ${levelId}`;
+        const elapsedMs =
+            parseImportedElapsedMs(getValueForRow(cells, 'elapsedMs'))
+            ?? parseImportedElapsedMs(getValueForRow(cells, 'elapsed'))
+            ?? 0;
+        const completedAtRaw = readStringValue(getValueForRow(cells, 'completedAt'), '');
+        const completedAtTimestamp = Date.parse(completedAtRaw);
+        const completedAt = Number.isFinite(completedAtTimestamp)
+            ? new Date(completedAtTimestamp).toISOString()
+            : new Date().toISOString();
+        const playerLabel = normalizeLeaderboardAliasInput(
+            readStringValue(getValueForRow(cells, 'playerLabel'), DEFAULT_BOARD_ALIAS),
+        );
+
+        entries.push({
+            playerLabel,
+            isLocal: false,
+            levelId,
+            levelName,
+            score: Math.max(0, Math.round(score)),
+            tokens: Math.max(0, Math.round(readStrictNumericValue(getValueForRow(cells, 'tokens')) ?? 0)),
+            livesLeft: Math.max(0, Math.round(readStrictNumericValue(getValueForRow(cells, 'livesLeft')) ?? 0)),
+            isWin: parseImportedOutcome(getValueForRow(cells, 'isWin')),
+            elapsedMs,
+            completedAt,
+        });
+
+        return entries;
+    }, []);
+};
+
+const extractFirstUrlFromText = (raw: string) =>
+    raw.match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[)>.,;!?]+$/, '') ?? '';
+
+type RemoteBoardImportTarget = {
+    url: string;
+    sourceLabel: string;
+};
+
+type RemoteBoardImportResult =
+    | {
+          kind: 'success';
+          rows: LeaderboardBoardEntry[];
+          sourceLabel: string;
+          sourceUrl: string;
+      }
+    | {
+          kind: 'unsupported';
+      }
+    | {
+          kind: 'error';
+          message: string;
+      };
+
+const parseUrlCandidate = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    const extractedUrl = extractFirstUrlFromText(trimmed);
+    const candidateUrl =
+        extractedUrl && extractedUrl !== trimmed
+            ? extractedUrl
+            : trimmed.includes('://')
+            ? trimmed
+            : extractedUrl;
+    if (!candidateUrl) return null;
+
+    try {
+        return new URL(candidateUrl);
+    } catch {
+        return null;
+    }
+};
+
+const readGoogleSheetsGid = (url: URL) => {
+    const searchGid = readStringValue(url.searchParams.get('gid') ?? '', '');
+    if (searchGid) return searchGid;
+
+    const hashGid = url.hash.match(/gid=(\d+)/i)?.[1] ?? '';
+    return readStringValue(hashGid, '');
+};
+
+const resolveRemoteBoardImportTarget = (raw: string): RemoteBoardImportTarget | null => {
+    const parsedUrl = parseUrlCandidate(raw);
+    if (!parsedUrl) return null;
+
+    const normalizedHostname = parsedUrl.hostname.toLowerCase();
+    const normalizedPathname = parsedUrl.pathname.toLowerCase();
+
+    if (normalizedHostname === 'docs.google.com' && normalizedPathname.startsWith('/spreadsheets/d/')) {
+        const sheetId = parsedUrl.pathname.match(/^\/spreadsheets\/d\/([^/]+)/)?.[1] ?? '';
+        if (!sheetId) return null;
+
+        const normalizedUrl = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/export`);
+        const requestedFormat = readStringValue(
+            parsedUrl.searchParams.get('format') ?? parsedUrl.searchParams.get('output') ?? '',
+            'csv',
+        ).toLowerCase();
+        const format = requestedFormat === 'tsv' ? 'tsv' : 'csv';
+        const gid = readGoogleSheetsGid(parsedUrl);
+
+        normalizedUrl.searchParams.set('format', format);
+        if (gid) normalizedUrl.searchParams.set('gid', gid);
+
+        return {
+            url: normalizedUrl.toString(),
+            sourceLabel: 'Google Sheets',
+        };
+    }
+
+    const requestedFormat = readStringValue(
+        parsedUrl.searchParams.get('format') ?? parsedUrl.searchParams.get('output') ?? '',
+        '',
+    ).toLowerCase();
+    const isDelimitedUrl =
+        normalizedPathname.endsWith('.csv')
+        || normalizedPathname.endsWith('.tsv')
+        || requestedFormat === 'csv'
+        || requestedFormat === 'tsv';
+
+    if (!isDelimitedUrl) return null;
+
+    return {
+        url: parsedUrl.toString(),
+        sourceLabel:
+            normalizedPathname.endsWith('.tsv') || requestedFormat === 'tsv'
+                ? 'TSV link'
+                : 'CSV link',
+    };
+};
+
+const fetchRemoteBoardImport = async (raw: string): Promise<RemoteBoardImportResult> => {
+    const target = resolveRemoteBoardImportTarget(raw);
+    if (!target) {
+        return { kind: 'unsupported' };
+    }
+
+    try {
+        const response = await fetch(target.url, {
+            headers: {
+                Accept: 'text/csv,text/tab-separated-values,text/plain;q=0.9,*/*;q=0.8',
+            },
+        });
+
+        if (!response.ok) {
+            return {
+                kind: 'error',
+                message:
+                    target.sourceLabel === 'Google Sheets'
+                        ? `Could not fetch the Google Sheets board (${response.status}). Publish the sheet or allow public CSV export, then try again.`
+                        : `Could not fetch that ${target.sourceLabel.toLowerCase()} (${response.status}). Check that it is public and returns raw rows.`,
+            };
+        }
+
+        const remoteText = await response.text();
+        const importedRows = parseDelimitedBoardEntries(remoteText);
+
+        if (importedRows.length === 0) {
+            return {
+                kind: 'error',
+                message:
+                    target.sourceLabel === 'Google Sheets'
+                        ? 'The Google Sheets link loaded, but the sheet did not contain recognizable leaderboard columns.'
+                        : `That ${target.sourceLabel.toLowerCase()} loaded, but it did not contain recognizable leaderboard rows.`,
+            };
+        }
+
+        return {
+            kind: 'success',
+            rows: importedRows,
+            sourceLabel: target.sourceLabel,
+            sourceUrl: target.url,
+        };
+    } catch (error) {
+        console.warn('Failed to fetch remote leaderboard import target', error);
+        return {
+            kind: 'error',
+            message:
+                target.sourceLabel === 'Google Sheets'
+                    ? 'Could not reach that Google Sheets board. Make sure the link is public or published as CSV.'
+                    : `Could not reach that ${target.sourceLabel.toLowerCase()}. Make sure the link is public and points to raw rows.`,
+        };
+    }
+};
+
+const parseSharedBoardUrl = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    const parsed = parseUrlCandidate(trimmed);
+    if (!parsed) return null;
+    try {
+        return {
+            boardToken: parsed.searchParams.get(LEADERBOARD_SHARE_QUERY_KEY) ?? trimmed,
+            routeLevelId: normalizeLeaderboardRouteLevelId(parsed.searchParams.get(LEADERBOARD_ROUTE_QUERY_KEY)),
+            openLeaderboard: parsed.searchParams.get(LEADERBOARD_VIEW_QUERY_KEY) === LEADERBOARD_VIEW_LEADERBOARD,
+        };
+    } catch {
+        return null;
+    }
+};
+
+const extractBoardToken = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+
+    const parsedUrl = parseUrlCandidate(trimmed);
+    if (parsedUrl) {
+        try {
+            return parsedUrl.searchParams.get(LEADERBOARD_SHARE_QUERY_KEY) ?? trimmed;
+        } catch {
+            return trimmed;
+        }
+    }
+
+    return trimmed;
+};
+
+const normalizeLeaderboardRouteLevelId = (raw: string | null | undefined) => {
+    const numeric = Number.parseInt(readStringValue(raw ?? '', ''), 10);
+    if (!Number.isFinite(numeric)) return null;
+
+    const normalized = Math.trunc(numeric);
+    return LEVELS.some((level) => level.id === normalized) ? normalized : null;
+};
+
+const parseLeaderboardShareInput = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+        return {
+            boardToken: '',
+            routeLevelId: null as number | null,
+            openLeaderboard: false,
+        };
+    }
+
+    const sharedUrlInput = parseSharedBoardUrl(trimmed);
+    if (sharedUrlInput) {
+        return sharedUrlInput;
+    }
+
+    return {
+        boardToken: extractBoardToken(trimmed),
+        routeLevelId: null as number | null,
+        openLeaderboard: false,
+    };
+};
+
+const summarizeImportedBoardRows = (rows: LeaderboardBoardEntry[]) => {
+    const importedCrewCount = new Set(rows.map((entry) => entry.playerLabel)).size;
+    return importedCrewCount > 1
+        ? `${importedCrewCount} crews`
+        : rows[0]?.playerLabel ?? DEFAULT_BOARD_ALIAS;
+};
+
+const readLeaderboardAlias = () =>
+    typeof window === 'undefined'
+        ? DEFAULT_BOARD_ALIAS
+        : readStringValue(window.localStorage.getItem(LEADERBOARD_ALIAS_KEY), DEFAULT_BOARD_ALIAS);
+
+const readLeaderboardRemoteSource = () =>
+    typeof window === 'undefined'
+        ? ''
+        : readStringValue(window.localStorage.getItem(LEADERBOARD_REMOTE_SOURCE_KEY), '');
+
+const readLeaderboardRemoteSyncAt = () => {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(LEADERBOARD_REMOTE_SYNC_AT_KEY);
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const normalizeLeaderboardAliasInput = (alias: string) => {
+    const normalized = alias.trim().replace(/\s+/g, ' ');
+    return readStringValue(normalized.slice(0, 24), DEFAULT_BOARD_ALIAS);
+};
+
+const persistLeaderboardAlias = (alias: string) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(LEADERBOARD_ALIAS_KEY, normalizeLeaderboardAliasInput(alias));
+};
+
+const persistLeaderboardRemoteSource = (source: string) => {
+    if (typeof window === 'undefined') return;
+
+    const normalized = source.trim();
+    if (normalized) {
+        window.localStorage.setItem(LEADERBOARD_REMOTE_SOURCE_KEY, normalized);
+        return;
+    }
+
+    window.localStorage.removeItem(LEADERBOARD_REMOTE_SOURCE_KEY);
+};
+
+const persistLeaderboardRemoteSyncAt = (syncAt: number | null) => {
+    if (typeof window === 'undefined') return;
+    if (syncAt && Number.isFinite(syncAt)) {
+        window.localStorage.setItem(LEADERBOARD_REMOTE_SYNC_AT_KEY, `${Math.trunc(syncAt)}`);
+        return;
+    }
+
+    window.localStorage.removeItem(LEADERBOARD_REMOTE_SYNC_AT_KEY);
+};
+
+const mergeCommunityBoardRows = (
+    previousRows: LeaderboardBoardEntry[],
+    incomingRows: LeaderboardBoardEntry[],
+) => sortLeaderboardBoardEntries(dedupeBoardEntries([...incomingRows, ...previousRows]));
+
+const hydrateCommunityBoard = (payload: LeaderboardSharePayload) =>
+    payload.entries.map((entry) => ({
+        ...entry,
+        playerLabel: readStringValue(entry.playerLabel, payload.alias),
+        isLocal: false,
+    }));
+
+const createCommunitySharePayload = (
+    runHistory: RunHistoryEntry[],
+    alias: string,
+): LeaderboardSharePayload => ({
+    game: 'Infinite Swinger',
+    version: LEADERBOARD_SHARE_VERSION,
+    sharedAt: Date.now(),
+    alias: readStringValue(alias, DEFAULT_BOARD_ALIAS),
+    entries: runHistory.slice(0, LEADERBOARD_SHARE_LIMIT).map((entry) => ({
+        playerLabel: readStringValue(alias, DEFAULT_BOARD_ALIAS),
+        score: entry.score,
+        levelId: entry.levelId,
+        levelName: entry.levelName,
+        isWin: entry.isWin,
+        elapsedMs: entry.elapsedMs,
+        tokens: entry.tokens,
+        livesLeft: entry.livesLeft,
+        completedAt: entry.completedAt,
+    })),
+});
+
+const dedupeBoardEntries = (entries: LeaderboardBoardEntry[]) => {
+    const buckets = new Map<string, LeaderboardBoardEntry>();
+
+    entries.forEach((entry) => {
+        const key = `${entry.playerLabel}|${entry.score}|${entry.levelId}|${entry.elapsedMs}|${entry.completedAt}`;
+        buckets.set(key, entry);
+    });
+
+    return [...buckets.values()];
+};
+
+const compareRunHistoryEntries = (left: RunHistoryEntry, right: RunHistoryEntry) => {
+    const scoreDiff = right.score - left.score;
+    if (scoreDiff !== 0) return scoreDiff;
+    const tokenDiff = right.tokens - left.tokens;
+    if (tokenDiff !== 0) return tokenDiff;
+    const lifeDiff = right.livesLeft - left.livesLeft;
+    if (lifeDiff !== 0) return lifeDiff;
+    return Date.parse(right.completedAt) - Date.parse(left.completedAt);
+};
+
+const compareRunHistoryEntriesByRecency = (left: RunHistoryEntry, right: RunHistoryEntry) => {
+    const rightTime = Date.parse(right.completedAt);
+    const leftTime = Date.parse(left.completedAt);
+    const rightIsFinite = Number.isFinite(rightTime);
+    const leftIsFinite = Number.isFinite(leftTime);
+
+    if (rightIsFinite && leftIsFinite && rightTime !== leftTime) {
+        return rightTime - leftTime;
+    }
+
+    if (rightIsFinite !== leftIsFinite) {
+        return rightIsFinite ? 1 : -1;
+    }
+
+    return compareRunHistoryEntries(left, right);
+};
+
+const getRunHistoryEntryKey = (entry: RunHistoryEntry) =>
+    `${entry.levelId}|${entry.score}|${entry.elapsedMs}|${entry.tokens}|${entry.livesLeft}|${entry.completedAt}`;
+
+const buildRunHistoryArchive = (entries: RunHistoryEntry[]) => {
+    const dedupedEntries = [...new globalThis.Map(
+        entries.map((entry) => [getRunHistoryEntryKey(entry), entry]),
+    ).values()];
+    const recentEntries = [...dedupedEntries]
+        .sort(compareRunHistoryEntriesByRecency)
+        .slice(0, RUN_HISTORY_RECENT_LIMIT);
+    const bestEntriesPerLevel = new Map<number, RunHistoryEntry[]>();
+
+    [...dedupedEntries]
+        .sort(compareRunHistoryEntries)
+        .forEach((entry) => {
+            const previousEntries = bestEntriesPerLevel.get(entry.levelId) ?? [];
+            if (previousEntries.length >= RUN_HISTORY_BEST_PER_LEVEL_LIMIT) return;
+            previousEntries.push(entry);
+            bestEntriesPerLevel.set(entry.levelId, previousEntries);
+        });
+
+    return [...new globalThis.Map(
+        [...recentEntries, ...[...bestEntriesPerLevel.values()].flat()].map((entry) => [getRunHistoryEntryKey(entry), entry]),
+    ).values()]
+        .sort(compareRunHistoryEntriesByRecency)
+        .slice(0, RUN_HISTORY_ARCHIVE_LIMIT);
+};
+
+const selectBestRunPerLevel = (entries: RunHistoryEntry[], limit = entries.length) => {
+    const bestByLevel = new Map<number, RunHistoryEntry>();
+
+    entries.forEach((entry) => {
+        const previous = bestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            bestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    return [...bestByLevel.values()]
+        .sort(compareRunHistoryEntries)
+        .slice(0, limit);
+};
+
+const getFeaturedRouteCupCountdownLabel = (remainingMs: number) => {
+    const safeRemainingMs = Math.max(0, remainingMs);
+    const totalMinutes = Math.max(1, Math.ceil(safeRemainingMs / (1000 * 60)));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours >= 24) {
+        const days = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
+        return remainingHours > 0 ? `Resets in ${days}d ${remainingHours}h` : `Resets in ${days}d`;
+    }
+
+    if (hours > 0) {
+        return `Resets in ${hours}h ${String(minutes).padStart(2, '0')}m`;
+    }
+
+    return `Resets in ${Math.max(1, totalMinutes)}m`;
+};
+
+const pickFeaturedRouteCupIndex = (levels: LevelConfig[], now: Date) => {
+    const dayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${levels.length}-${levels[0]?.id ?? 0}`;
+    let hash = 7;
+
+    for (let index = 0; index < dayKey.length; index += 1) {
+        hash = Math.imul(hash, 31) + dayKey.charCodeAt(index);
+    }
+
+    return (hash >>> 0) % levels.length;
+};
+
+const buildFeaturedRouteCup = (
+    saveData: SaveData,
+    highestUnlockedLevel: number,
+    communityBoardEntries: LeaderboardBoardEntry[],
+    now = new Date(),
+): FeaturedRouteCup | null => {
+    const unlockedLevels = LEVELS.filter((level) => level.id <= highestUnlockedLevel);
+    if (unlockedLevels.length === 0) return null;
+
+    const localBestByLevel = new globalThis.Map<number, RunHistoryEntry>();
+    const rivalBestByLevel = new globalThis.Map<number, LeaderboardBoardEntry>();
+
+    saveData.runHistory.forEach((entry) => {
+        if (entry.levelId > highestUnlockedLevel) return;
+        const previous = localBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            localBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    communityBoardEntries.forEach((entry) => {
+        if (entry.levelId > highestUnlockedLevel) return;
+        const previous = rivalBestByLevel.get(entry.levelId);
+        if (!previous || compareRunHistoryEntries(entry, previous) < 0) {
+            rivalBestByLevel.set(entry.levelId, entry);
+        }
+    });
+
+    const rivalAttackLevels: LevelConfig[] = [];
+    const rivalDefenseLevels: LevelConfig[] = [];
+    const frontierLevels: LevelConfig[] = [];
+    const masteryLevels: LevelConfig[] = [];
+    const replayLevels: LevelConfig[] = [];
+
+    unlockedLevels.forEach((level) => {
+        const localBest = localBestByLevel.get(level.id) ?? null;
+        const rivalBest = rivalBestByLevel.get(level.id) ?? null;
+        const result = saveData.levelResults[String(level.id)] ?? null;
+
+        if (rivalBest) {
+            if (!localBest || rivalBest.score >= localBest.score) {
+                rivalAttackLevels.push(level);
+            } else {
+                rivalDefenseLevels.push(level);
+            }
+            return;
+        }
+
+        if ((result?.clears ?? 0) === 0) {
+            frontierLevels.push(level);
+            return;
+        }
+
+        if ((result?.stars ?? 0) < 3) {
+            masteryLevels.push(level);
+            return;
+        }
+
+        replayLevels.push(level);
+    });
+
+    const featuredPool =
+        rivalAttackLevels.length > 0
+            ? rivalAttackLevels
+            : rivalDefenseLevels.length > 0
+            ? rivalDefenseLevels
+            : frontierLevels.length > 0
+            ? frontierLevels
+            : masteryLevels.length > 0
+            ? masteryLevels
+            : replayLevels.length > 0
+            ? replayLevels
+            : unlockedLevels;
+    const featuredLevel = featuredPool[pickFeaturedRouteCupIndex(featuredPool, now)] ?? unlockedLevels[0];
+    const localBest = localBestByLevel.get(featuredLevel.id) ?? null;
+    const rivalBest = rivalBestByLevel.get(featuredLevel.id) ?? null;
+    const levelResult = saveData.levelResults[String(featuredLevel.id)] ?? null;
+    const targetStep = Math.max(40, Math.round(featuredLevel.targetDistance * 0.035));
+    const nextReset = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+
+    let title = `Push ${featuredLevel.name}`;
+    let detail = 'Daily cup route. Clean up this lane to keep the atlas rotation moving.';
+    let statusLabel = 'Live';
+    let tone: FeaturedRouteCup['tone'] = 'cyan';
+    let targetScore: number | null = null;
+    let progressPercent = 0;
+    let targetLabel = 'First score claims the cup';
+
+    if (rivalBest && localBest) {
+        const gap = rivalBest.score - localBest.score;
+
+        if (gap > 0) {
+            title = `Close ${gap} pts on ${featuredLevel.name}`;
+            detail = `${rivalBest.playerLabel} owns today's route at ${rivalBest.score} pts. Beat that mark before reset to flip the cup.`;
+            statusLabel = 'Chasing';
+            tone = 'rose';
+            targetScore = rivalBest.score + 1;
+            progressPercent = clamp((localBest.score / Math.max(1, targetScore)) * 100, 0, 100);
+        } else if (gap < 0) {
+            title = `Defend ${featuredLevel.name}`;
+            detail = `You lead ${rivalBest.playerLabel} by ${Math.abs(gap)} pts on today's cup. Extend the gap so the lane stays clearly yours.`;
+            statusLabel = 'Ahead';
+            tone = 'emerald';
+            targetScore = localBest.score + targetStep;
+            progressPercent = clamp((localBest.score / Math.max(1, targetScore)) * 100, 0, 100);
+        } else {
+            title = `Break the tie on ${featuredLevel.name}`;
+            detail = `You and ${rivalBest.playerLabel} are dead even on today's route. A cleaner clear decides the cup before midnight.`;
+            statusLabel = 'Tied';
+            tone = 'cyan';
+            targetScore = localBest.score + targetStep;
+            progressPercent = clamp((localBest.score / Math.max(1, targetScore)) * 100, 0, 100);
+        }
+    } else if (rivalBest) {
+        title = `Post the first mark on ${featuredLevel.name}`;
+        detail = `${rivalBest.playerLabel} already posted ${rivalBest.score} pts on today's cup. Put your first benchmark on the board.`;
+        statusLabel = 'Open rivalry';
+        tone = 'amber';
+        targetScore = rivalBest.score + 1;
+        progressPercent = 0;
+    } else if (!localBest) {
+        title = `Open ${featuredLevel.name}`;
+        detail = 'No benchmark exists on today’s featured route yet. Land the first clean score to own the cup outright.';
+        statusLabel = 'Unclaimed';
+        tone = 'amber';
+        targetScore = null;
+        progressPercent = (levelResult?.clears ?? 0) > 0 ? 100 : 0;
+    } else if ((levelResult?.stars ?? 0) < 3) {
+        title = `Perfect ${featuredLevel.name}`;
+        detail = 'Today’s cup is set to a mastery lane. Improve the route and chase the missing stars while the focus is live.';
+        statusLabel = `${levelResult?.stars ?? 0}/3 stars`;
+        tone = 'cyan';
+        targetScore = localBest.score + targetStep;
+        progressPercent = clamp((localBest.score / Math.max(1, targetScore)) * 100, 0, 100);
+    } else {
+        title = `Extend ${featuredLevel.name}`;
+        detail = 'This route is already stable. Use the daily cup to raise the benchmark and make the next import chase harder.';
+        statusLabel = 'Personal push';
+        tone = 'cyan';
+        targetScore = localBest.score + targetStep;
+        progressPercent = clamp((localBest.score / Math.max(1, targetScore)) * 100, 0, 100);
+    }
+
+    if (targetScore !== null) {
+        targetLabel = `Target ${targetScore} pts`;
+    } else if (localBest) {
+        targetLabel = `Best ${localBest.score} pts`;
+    }
+
+    return {
+        levelId: featuredLevel.id,
+        levelName: featuredLevel.name,
+        title,
+        detail,
+        statusLabel,
+        countdownLabel: getFeaturedRouteCupCountdownLabel(nextReset.getTime() - now.getTime()),
+        targetLabel,
+        tone,
+        progressPercent,
+        targetScore,
+        localBest,
+        rivalBest: rivalBest
+            ? {
+                score: rivalBest.score,
+                levelId: rivalBest.levelId,
+                levelName: rivalBest.levelName,
+                isWin: rivalBest.isWin,
+                elapsedMs: rivalBest.elapsedMs,
+                tokens: rivalBest.tokens,
+                livesLeft: rivalBest.livesLeft,
+                completedAt: rivalBest.completedAt,
+                playerLabel: rivalBest.playerLabel,
+            }
+            : null,
+    };
+};
+
+const buildFeaturedRouteCupRunOutcome = (
+    levelId: number,
+    isWin: boolean,
+    priorCup: FeaturedRouteCup | null,
+    postCup: FeaturedRouteCup | null,
+): FeaturedRouteCupRunOutcome | null => {
+    if (!priorCup || !postCup) return null;
+    if (priorCup.levelId !== levelId || postCup.levelId !== levelId || priorCup.levelId !== postCup.levelId) return null;
+
+    const priorLocalBest = priorCup.localBest?.score ?? null;
+    const postLocalBest = postCup.localBest?.score ?? null;
+    if (postLocalBest === null) return null;
+    if (priorLocalBest !== null && postLocalBest <= priorLocalBest) return null;
+
+    const localGain = postLocalBest - (priorLocalBest ?? 0);
+    const priorRivalBest = priorCup.rivalBest?.score ?? null;
+    const priorRivalLabel = priorCup.rivalBest?.playerLabel ?? 'the rival';
+
+    if (priorLocalBest === null) {
+        if (priorRivalBest !== null) {
+            return {
+                title: `First featured cup post`,
+                description: `You entered ${priorCup.levelName} with ${postLocalBest} points, so the lane is now yours to defend until reset.`,
+                tone: isWin ? 'emerald' : 'cyan',
+            };
+        }
+
+        return {
+            title: `Featured cup opened`,
+            description: `Your first score on ${priorCup.levelName} is now a live benchmark for today's lane pressure.`,
+            tone: isWin ? 'cyan' : 'amber',
+        };
+    }
+
+    if (priorRivalBest === null) {
+        const targetGainText = postCup.targetScore === null ? '' : `Target moved to ${postCup.targetScore} points.`;
+        return {
+            title: `Daily cup pressure raised`,
+            description: `You raised this featured lane by ${localGain} points. ${targetGainText}`,
+            tone: isWin ? 'emerald' : 'cyan',
+        };
+    }
+
+    const priorGap = priorRivalBest - priorLocalBest;
+    const postGap = priorRivalBest - postLocalBest;
+    const gapClosed = priorGap - postGap;
+
+    if (priorGap > 0 && postGap <= 0) {
+        return {
+            title: `Featured lane flipped`,
+            description: `You beat ${priorRivalLabel} and took the featured lane with ${postLocalBest} points on ${postCup.levelName}.`,
+            tone: 'emerald',
+        };
+    }
+
+    if (priorGap > 0) {
+        return {
+            title: `Featured gap narrowed`,
+            description: `You reduced the featured lane deficit by ${gapClosed} points, now down ${Math.max(0, postGap)} from ${priorRivalLabel}.`,
+            tone: isWin ? 'emerald' : 'amber',
+        };
+    }
+
+    if (priorGap <= 0 && gapClosed > 0) {
+        return {
+            title: `Featured lead extended`,
+            description: `You pulled further ahead on ${postCup.levelName}, extending daily pressure by ${Math.abs(gapClosed)} points.`,
+            tone: 'emerald',
+        };
+    }
+
+    return null;
+};
+
+const EMPTY_RECOMMENDATION_METRICS: RecommendationMetrics = {
+    offers: 0,
+    opens: 0,
+    purchases: 0,
+    skips: 0,
+    openDelayTotalMs: 0,
+    openDelaySamples: 0,
+    skipDelayTotalMs: 0,
+    skipDelaySamples: 0,
+    openToBuyTotalMs: 0,
+    openToBuySamples: 0,
 };
 const WEATHER_LABELS: Record<WeatherType, string> = {
     CLEAR: 'Clear',
@@ -207,6 +2062,297 @@ const readUiPreferenceFlag = (key: 'isMuted', fallback: boolean) => {
     }
 };
 
+const readNumericValue = (value: unknown, fallback = 0) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+const safeRatePercent = (numerator: number, denominator: number) => (denominator > 0 ? Math.round((numerator / denominator) * 100) : null);
+const safeSeconds = (totalMs: number, sampleCount: number) =>
+    sampleCount > 0 ? Math.round(totalMs / sampleCount / 1000) : null;
+
+const readRecommendationMetrics = (): RecommendationMetrics => {
+    if (typeof window === 'undefined') return EMPTY_RECOMMENDATION_METRICS;
+    try {
+        const raw = window.localStorage.getItem(RECOMMENDATION_METRICS_KEY);
+        if (!raw) return EMPTY_RECOMMENDATION_METRICS;
+        const parsed = JSON.parse(raw);
+
+        return {
+            offers: readNumericValue(parsed?.offers),
+            opens: readNumericValue(parsed?.opens),
+            purchases: readNumericValue(parsed?.purchases),
+            skips: readNumericValue(parsed?.skips),
+            openDelayTotalMs: readNumericValue(parsed?.openDelayTotalMs),
+            openDelaySamples: readNumericValue(parsed?.openDelaySamples),
+            skipDelayTotalMs: readNumericValue(parsed?.skipDelayTotalMs),
+            skipDelaySamples: readNumericValue(parsed?.skipDelaySamples),
+            openToBuyTotalMs: readNumericValue(parsed?.openToBuyTotalMs),
+            openToBuySamples: readNumericValue(parsed?.openToBuySamples),
+        };
+    } catch {
+        return EMPTY_RECOMMENDATION_METRICS;
+    }
+};
+
+const readRecommendationTrendHistory = (): RecommendationTrendSample[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = window.localStorage.getItem(RECOMMENDATION_TREND_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+
+        const values = parsed
+            .map((entry) => ({
+                runId: readNumericValue(entry?.runId, -1),
+                outcome:
+                    entry?.outcome === 'win' || entry?.outcome === 'fail'
+                        ? entry.outcome
+                        : null,
+                offers: readNumericValue(entry?.offers),
+                opens: readNumericValue(entry?.opens),
+                purchases: readNumericValue(entry?.purchases),
+                skips: readNumericValue(entry?.skips),
+                openDelayTotalMs: readNumericValue(entry?.openDelayTotalMs),
+                openDelaySamples: readNumericValue(entry?.openDelaySamples),
+                skipDelayTotalMs: readNumericValue(entry?.skipDelayTotalMs),
+                skipDelaySamples: readNumericValue(entry?.skipDelaySamples),
+                openToBuyTotalMs: readNumericValue(entry?.openToBuyTotalMs),
+                openToBuySamples: readNumericValue(entry?.openToBuySamples),
+                completedAt: readNumericValue(entry?.completedAt),
+            }))
+            .filter((entry) => entry.runId >= 0);
+
+        return values
+            .sort((a, b) => a.completedAt - b.completedAt)
+            .slice(-RECOMMENDATION_TREND_HISTORY_SIZE);
+    } catch {
+        return [];
+    }
+};
+
+const createRecommendationTrendSample = (
+    runId: number,
+    metrics: RecommendationMetrics,
+    outcome: 'win' | 'fail' | null,
+): RecommendationTrendSample => ({
+    runId,
+    outcome,
+    offers: Math.max(0, Math.round(metrics.offers)),
+    opens: Math.max(0, Math.round(metrics.opens)),
+    purchases: Math.max(0, Math.round(metrics.purchases)),
+    skips: Math.max(0, Math.round(metrics.skips)),
+    openDelayTotalMs: Math.max(0, Math.round(metrics.openDelayTotalMs)),
+    openDelaySamples: Math.max(0, Math.round(metrics.openDelaySamples)),
+    skipDelayTotalMs: Math.max(0, Math.round(metrics.skipDelayTotalMs)),
+    skipDelaySamples: Math.max(0, Math.round(metrics.skipDelaySamples)),
+    openToBuyTotalMs: Math.max(0, Math.round(metrics.openToBuyTotalMs)),
+    openToBuySamples: Math.max(0, Math.round(metrics.openToBuySamples)),
+    completedAt: Date.now(),
+});
+
+const summarizeRecommendationTrendSamples = (samples: RecommendationTrendSample[]): RecommendationTrendSummary => {
+    const totals = samples.reduce(
+        (acc, sample) => ({
+            offers: acc.offers + sample.offers,
+            opens: acc.opens + sample.opens,
+            purchases: acc.purchases + sample.purchases,
+            skips: acc.skips + sample.skips,
+            openDelayTotalMs: acc.openDelayTotalMs + sample.openDelayTotalMs,
+            openDelaySamples: acc.openDelaySamples + sample.openDelaySamples,
+            skipDelayTotalMs: acc.skipDelayTotalMs + sample.skipDelayTotalMs,
+            skipDelaySamples: acc.skipDelaySamples + sample.skipDelaySamples,
+            openToBuyTotalMs: acc.openToBuyTotalMs + sample.openToBuyTotalMs,
+            openToBuySamples: acc.openToBuySamples + sample.openToBuySamples,
+        }),
+        {
+            offers: 0,
+            opens: 0,
+            purchases: 0,
+            skips: 0,
+            openDelayTotalMs: 0,
+            openDelaySamples: 0,
+            skipDelayTotalMs: 0,
+            skipDelaySamples: 0,
+            openToBuyTotalMs: 0,
+            openToBuySamples: 0,
+        },
+    );
+
+    return {
+        offers: totals.offers,
+        opens: totals.opens,
+        purchases: totals.purchases,
+        skips: totals.skips,
+        openRatePercent: safeRatePercent(totals.opens, totals.offers),
+        buyRatePercent: safeRatePercent(totals.purchases, totals.offers),
+        avgOpenDelaySeconds: safeSeconds(totals.openDelayTotalMs, totals.openDelaySamples),
+        avgOpenToBuySeconds: safeSeconds(totals.openToBuyTotalMs, totals.openToBuySamples),
+        avgSkipDelaySeconds: safeSeconds(totals.skipDelayTotalMs, totals.skipDelaySamples),
+        runSamples: samples.length,
+    };
+};
+
+const summarizeRecommendationTrendSamplesByOutcome = (samples: RecommendationTrendSample[]) => ({
+    all: summarizeRecommendationTrendSamples(samples),
+    win: summarizeRecommendationTrendSamples(samples.filter((entry) => entry.outcome === 'win')),
+    fail: summarizeRecommendationTrendSamples(samples.filter((entry) => entry.outcome === 'fail')),
+});
+
+const createRunHistoryEntry = (
+  level: LevelConfig,
+  isWin: boolean,
+  elapsedMs: number,
+  score: number,
+  tokens: number,
+  livesLeft: number,
+): RunHistoryEntry => ({
+    score,
+    levelId: level.id,
+    levelName: level.name,
+    isWin,
+    elapsedMs,
+    tokens,
+    livesLeft,
+    completedAt: new Date().toISOString(),
+});
+
+const buildActiveRoutePressure = (
+    level: LevelConfig | null,
+    localRunHistory: RunHistoryEntry[],
+    communityBoardEntries: LeaderboardBoardEntry[],
+    currentScore: number,
+) : ActiveRoutePressure | null => {
+    if (!level) return null;
+
+    const localBest = [...localRunHistory]
+        .filter((entry) => entry.levelId === level.id)
+        .sort((left, right) => compareRunHistoryEntries(left, right))[0] ?? null;
+    const rivalBest = [...communityBoardEntries]
+        .filter((entry) => entry.levelId === level.id)
+        .sort((left, right) => compareRunHistoryEntries(left, right))[0] ?? null;
+
+    const progressPercent = (targetScore: number) =>
+        Math.max(0, Math.min(100, Math.round((currentScore / Math.max(1, targetScore)) * 100)));
+
+    if (rivalBest && localBest) {
+        const rivalGap = rivalBest.score - localBest.score;
+        if (rivalGap > 0) {
+            const gapToLead = Math.max(0, rivalBest.score + 1 - currentScore);
+            return {
+                label: 'Rival chase',
+                title: gapToLead > 0 ? `${gapToLead} pts to take the lane` : `Lead secured on ${rivalBest.playerLabel}`,
+                detail: gapToLead > 0
+                    ? `${rivalBest.playerLabel} owns this route at ${rivalBest.score}. Beat it to flip the board.`
+                    : `Current run is past ${rivalBest.playerLabel}'s benchmark. Finish clean to bank the takeover.`,
+                targetScore: rivalBest.score + 1,
+                gapScore: currentScore - (rivalBest.score + 1),
+                progressPercent: progressPercent(rivalBest.score + 1),
+                tone: gapToLead > 0 ? 'rose' : 'emerald',
+            };
+        }
+
+        if (rivalGap < 0) {
+            const extendLeadBy = Math.abs(rivalGap) + Math.max(25, Math.round(level.targetDistance * 0.018));
+            const targetScore = localBest.score + extendLeadBy;
+            const gapToTarget = Math.max(0, targetScore - currentScore);
+            return {
+                label: 'Route defense',
+                title: gapToTarget > 0 ? `${gapToTarget} pts to widen the lead` : 'Defensive run ahead of pace',
+                detail: `You lead ${rivalBest.playerLabel} by ${Math.abs(rivalGap)}. Push beyond ${targetScore} to make the route harder to steal back.`,
+                targetScore,
+                gapScore: currentScore - targetScore,
+                progressPercent: progressPercent(targetScore),
+                tone: gapToTarget > 0 ? 'cyan' : 'emerald',
+            };
+        }
+
+        const gapToBreakTie = Math.max(0, localBest.score + 1 - currentScore);
+        return {
+            label: 'Dead heat',
+            title: gapToBreakTie > 0 ? `${gapToBreakTie} pts to break the tie` : 'Tie broken on current pace',
+            detail: `${rivalBest.playerLabel} matched your ${localBest.score}-point benchmark. One cleaner finish decides the route.`,
+            targetScore: localBest.score + 1,
+            gapScore: currentScore - (localBest.score + 1),
+            progressPercent: progressPercent(localBest.score + 1),
+            tone: gapToBreakTie > 0 ? 'amber' : 'emerald',
+        };
+    }
+
+    if (rivalBest) {
+        const gapToFirstLead = Math.max(0, rivalBest.score + 1 - currentScore);
+        return {
+            label: 'First marker',
+            title: gapToFirstLead > 0 ? `${gapToFirstLead} pts to post above rival` : 'First local benchmark is ahead',
+            detail: `${rivalBest.playerLabel} already posted ${rivalBest.score}. This run can open the head-to-head route for your board.`,
+            targetScore: rivalBest.score + 1,
+            gapScore: currentScore - (rivalBest.score + 1),
+            progressPercent: progressPercent(rivalBest.score + 1),
+            tone: gapToFirstLead > 0 ? 'cyan' : 'emerald',
+        };
+    }
+
+    if (localBest) {
+        const nextPersonalBest = localBest.score + Math.max(25, Math.round(level.targetDistance * 0.018));
+        const gapToBest = Math.max(0, nextPersonalBest - currentScore);
+        return {
+            label: 'Personal best',
+            title: gapToBest > 0 ? `${gapToBest} pts to raise the route best` : 'Current run beats your route best',
+            detail: `Your standing best is ${localBest.score}. A cleaner finish here raises the shareable benchmark.`,
+            targetScore: nextPersonalBest,
+            gapScore: currentScore - nextPersonalBest,
+            progressPercent: progressPercent(nextPersonalBest),
+            tone: gapToBest > 0 ? 'amber' : 'emerald',
+        };
+    }
+
+    const openingBenchmark = Math.max(180, Math.round(level.targetDistance * 0.24));
+    const gapToBenchmark = Math.max(0, openingBenchmark - currentScore);
+    return {
+        label: 'Opening benchmark',
+        title: gapToBenchmark > 0 ? `${gapToBenchmark} pts to establish a scoreline` : 'Opening route score established',
+        detail: 'No prior run owns this route yet. Land a clean score so future imports have something to chase.',
+        targetScore: openingBenchmark,
+        gapScore: currentScore - openingBenchmark,
+        progressPercent: progressPercent(openingBenchmark),
+        tone: gapToBenchmark > 0 ? 'amber' : 'emerald',
+    };
+};
+
+const buildActiveFeaturedCupPressure = (
+    level: LevelConfig | null,
+    featuredRouteCup: FeaturedRouteCup | null,
+    currentScore: number,
+): ActiveFeaturedRoutePressure | null => {
+    if (!level || !featuredRouteCup || level.id !== featuredRouteCup.levelId) {
+        return null;
+    }
+
+    const targetScore = featuredRouteCup.targetScore;
+    const targetLabel = targetScore === null ? featuredRouteCup.targetLabel : `Target ${targetScore} pts`;
+    const progressPercent =
+        targetScore === null
+            ? featuredRouteCup.progressPercent
+            : clamp(Math.round((currentScore / Math.max(1, targetScore)) * 100), 0, 100);
+    const gapToTarget = targetScore === null ? null : targetScore - currentScore;
+    const gapScore = targetScore === null ? null : currentScore - targetScore;
+
+    return {
+        label: 'Daily Crew Cup',
+        title:
+            targetScore === null
+                ? featuredRouteCup.statusLabel
+                : gapToTarget > 0
+                    ? `${gapToTarget} pts to hit today's cup mark`
+                    : 'You already hit the featured cup mark',
+        detail: featuredRouteCup.detail,
+        targetScore,
+        gapScore,
+        progressPercent,
+        tone: featuredRouteCup.tone,
+        statusLabel: featuredRouteCup.statusLabel,
+        countdownLabel: featuredRouteCup.countdownLabel,
+        targetLabel,
+    };
+};
+
 // --- AUDIO CONFIG ---
 const SFX_URLS = {
     BRANCH_BREAK: resolveAudioCueUrl('branch_break') ?? '',
@@ -276,6 +2422,22 @@ const SoundSynth = {
 
 // --- HELPER FUNCTIONS ---
 const randomRange = (min: number, max: number) => Math.random() * (max - min) + min;
+const mixSeed = (...parts: number[]) =>
+    parts.reduce((seed, part, index) => {
+        const normalized = Number.isFinite(part) ? Math.round(part * (index % 2 === 0 ? 1 : 1000)) : 0;
+        const next = (seed ^ (normalized + 0x9e3779b9 + (seed << 6) + (seed >>> 2))) >>> 0;
+        return next === 0 ? 0x6d2b79f5 : next;
+    }, 0x811c9dc5);
+const createSeededRandom = (seed: number) => {
+    let state = seed >>> 0;
+    return () => {
+        state = (state + 0x6d2b79f5) >>> 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+};
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const getMapNodePosition = (index: number) => {
     const horizontalPadding = MENU_MAP_WORLD_WIDTH * 0.12;
@@ -314,7 +2476,9 @@ const getMapRegionForLevel = (levelId: number) => {
     if (levelId <= 2) return MAP_REGION_LOOKUP.get('floodline-rise') ?? null;
     if (levelId <= 4) return MAP_REGION_LOOKUP.get('great-lake-basin') ?? null;
     if (levelId <= 6) return MAP_REGION_LOOKUP.get('troll-valley') ?? null;
-    return MAP_REGION_LOOKUP.get('magma-frontier') ?? null;
+    if (levelId <= 11) return MAP_REGION_LOOKUP.get('magma-frontier') ?? null;
+    if (levelId <= 12) return MAP_REGION_LOOKUP.get('storm-crown') ?? null;
+    return MAP_REGION_LOOKUP.get('aether-bastion') ?? MAP_REGION_LOOKUP.get('storm-crown') ?? MAP_REGION_LOOKUP.get('magma-frontier') ?? null;
 };
 const getMenuFocusAnchorForLevel = (levelId: number, zoom: number) => {
     const progress = LEVELS.length > 1 ? (levelId - 1) / (LEVELS.length - 1) : 0;
@@ -555,6 +2719,18 @@ const createEmptyLevelResult = (): LevelResult => ({
     clears: 0,
 });
 
+const createInitialRunDebrief = (): RunDebrief => ({
+    checkpointsSecured: 0,
+    redeploys: 0,
+    hazardHits: 0,
+    jumpsUsed: 0,
+    maxComboMultiplier: BASE_MULTIPLIER,
+    maxComboRank: 'GROOVIN',
+    maxComboScore: 0,
+    peakSpeed: 0,
+    usedSafetyNet: false,
+});
+
 const computeLevelStars = (level: LevelConfig, timeMs: number, livesRemaining: number) => {
     const parMs = Math.max(50000, level.targetDistance * 95);
     let stars = 1;
@@ -569,6 +2745,8 @@ const buildSessionMusicProfile = (biome: BiomeType, levelId: number, sessionNumb
 
 const getSegmentRouteTemplate = (level: LevelConfig, startX: number): 'recovery' | 'speed' | 'vertical' | 'hazard' | 'gem' => {
     if (level.tutorialType === 'BASIC') return 'recovery';
+    const routeSpawnProfile = getRouteSpawnProfile(level);
+    const routeProgress = routeSpawnProfile.routeProgress;
 
     const routeBudget = Math.max(1, level.targetDistance * 20);
     const progress = clamp(startX / routeBudget, 0, 0.999);
@@ -579,7 +2757,7 @@ const getSegmentRouteTemplate = (level: LevelConfig, startX: number): 'recovery'
     if (act === 'reward') return 'gem';
     if (act === 'speed') return 'speed';
     if (act === 'hazard') return 'hazard';
-    if (level.id <= 4 || level.threatProfile === 'starter') return 'speed';
+    if (routeProgress <= ROUTE_PROFILE_THRESHOLD.speedTemplateCap || level.threatProfile === 'starter') return 'speed';
     return level.biome === 'SWAMP' ? 'vertical' : 'hazard';
 };
 
@@ -613,7 +2791,23 @@ export default function App() {
   const [tutorial, setTutorial] = useState<TutorialState>({ active: false, currentStep: 'WELCOME', showBox: false, message: "" });
   const [hideTutorialTips, setHideTutorialTips] = useState(false);
   const [activeTab, setActiveTab] = useState<'UPGRADES' | 'ROPES' | 'SKINS'>('UPGRADES');
+  const [recommendedShopItemId, setRecommendedShopItemId] = useState<string | null>(null);
+  const [recommendationTrace, setRecommendationTrace] = useState<RecommendationTrace | null>(null);
+  const [recommendationMetrics, setRecommendationMetrics] = useState<RecommendationMetrics>(readRecommendationMetrics);
+  const [recommendationSessionMetrics, setRecommendationSessionMetrics] = useState<RecommendationMetrics>(EMPTY_RECOMMENDATION_METRICS);
+  const [recommendationRunHistory, setRecommendationRunHistory] = useState<RecommendationTrendSample[]>(
+    readRecommendationTrendHistory,
+  );
+  const [runCampaignChallengeResult, setRunCampaignChallengeResult] = useState<{
+    title: string;
+    description: string;
+    tone: CampaignChallenge['tone'];
+  } | null>(null);
+  const [runFeaturedRouteCupResult, setRunFeaturedRouteCupResult] = useState<FeaturedRouteCupRunOutcome | null>(null);
+  const [runAchievementUnlocks, setRunAchievementUnlocks] = useState<RunAchievementUnlock[]>([]);
   const [purchaseReceipt, setPurchaseReceipt] = useState<PurchaseReceipt | null>(null);
+  const recommendationSessionMetricsRef = useRef(recommendationSessionMetrics);
+  const recommendationRunIdRef = useRef(0);
   
   // AUDIO STATE
   const [isMuted, setIsMuted] = useState(() => readUiPreferenceFlag('isMuted', false));
@@ -633,7 +2827,14 @@ export default function App() {
   const [isSaveHydrated, setIsSaveHydrated] = useState(false);
   const [saveRecoveryNotice, setSaveRecoveryNotice] = useState<string | null>(null);
   const [checkpointBanner, setCheckpointBanner] = useState<string | null>(null);
-  const [runIntroBanner, setRunIntroBanner] = useState<{ title: string; subtitle: string } | null>(null);
+  const [runIntroBanner, setRunIntroBanner] = useState<RunIntroBannerState | null>(null);
+  const [communityBoardEntries, setCommunityBoardEntries] = useState<LeaderboardBoardEntry[]>([]);
+  const [leaderboardAlias, setLeaderboardAlias] = useState(() => readLeaderboardAlias());
+  const [leaderboardRemoteSource, setLeaderboardRemoteSource] = useState(() => readLeaderboardRemoteSource());
+  const [leaderboardRemoteSyncAt, setLeaderboardRemoteSyncAt] = useState<number | null>(() => readLeaderboardRemoteSyncAt());
+  const [isProgressDrawerOpen, setIsProgressDrawerOpen] = useState(false);
+  const [pendingSharedLeaderboardOpen, setPendingSharedLeaderboardOpen] = useState(false);
+  const [incomingRouteChallenge, setIncomingRouteChallenge] = useState<IncomingRouteChallenge | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -667,6 +2868,71 @@ export default function App() {
   }, [isSaveHydrated, saveData]);
 
   useEffect(() => {
+      if (typeof window === 'undefined') return;
+
+      const incomingFromStorage = readCommunityBoardStorage();
+      if (incomingFromStorage.length > 0) {
+          setCommunityBoardEntries(incomingFromStorage);
+      }
+
+      const query = new URLSearchParams(window.location.search);
+      const routeLevelId = normalizeLeaderboardRouteLevelId(query.get(LEADERBOARD_ROUTE_QUERY_KEY));
+      if (routeLevelId !== null) {
+          setSelectedLevelId(routeLevelId);
+          selectedLevelRef.current = routeLevelId;
+      }
+
+      const incomingCode = query.get(LEADERBOARD_SHARE_QUERY_KEY);
+      const extractedCode = extractBoardToken(incomingCode ?? '');
+      const openSharedLeaderboard = query.get(LEADERBOARD_VIEW_QUERY_KEY) === LEADERBOARD_VIEW_LEADERBOARD;
+      if (!extractedCode) {
+          query.delete(LEADERBOARD_ROUTE_QUERY_KEY);
+          query.delete(LEADERBOARD_VIEW_QUERY_KEY);
+          const queryEntries = query.toString();
+          const cleanUrl = `${window.location.pathname}${queryEntries ? `?${queryEntries}` : ''}${window.location.hash}`;
+          window.history.replaceState({}, '', cleanUrl);
+          setIncomingRouteChallenge(null);
+          return;
+      }
+
+      const incomingPayload = decodeLeaderboardPayload(extractedCode);
+      if (!incomingPayload || incomingPayload.entries.length === 0) {
+          setSaveRecoveryNotice('Could not read leaderboard share code from URL.');
+          setIncomingRouteChallenge(null);
+      } else {
+          setLeaderboardRemoteSource('');
+          setLeaderboardRemoteSyncAt(null);
+          const incomingRows: LeaderboardBoardEntry[] = hydrateCommunityBoard(incomingPayload);
+          setCommunityBoardEntries((previous) =>
+              mergeCommunityBoardRows(previous, incomingRows),
+          );
+          if (routeLevelId !== null) {
+              const level = LEVELS.find((entry) => entry.id === routeLevelId);
+              setIncomingRouteChallenge({
+                  levelId: routeLevelId,
+                  challengerAlias: readStringValue(incomingPayload.alias, DEFAULT_BOARD_ALIAS),
+              });
+              setSaveRecoveryNotice(
+                  `Imported ${incomingPayload.entries.length} community runs from ${incomingPayload.alias} and focused ${level ? `L${level.id} ${level.name}` : `L${routeLevelId}`}.`,
+              );
+          } else {
+              setIncomingRouteChallenge(null);
+              setSaveRecoveryNotice(`Imported ${incomingPayload.entries.length} community runs from ${incomingPayload.alias}.`);
+          }
+          if (openSharedLeaderboard) {
+              setPendingSharedLeaderboardOpen(true);
+          }
+      }
+
+      query.delete(LEADERBOARD_SHARE_QUERY_KEY);
+      query.delete(LEADERBOARD_ROUTE_QUERY_KEY);
+      query.delete(LEADERBOARD_VIEW_QUERY_KEY);
+      const queryEntries = query.toString();
+      const cleanUrl = `${window.location.pathname}${queryEntries ? `?${queryEntries}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', cleanUrl);
+  }, []);
+
+  useEffect(() => {
       if (gameState !== GameState.MENU) return;
       if (selectedLevelId !== null) return;
       const fallbackLevel = Math.max(1, Math.min(saveDataRef.current.lastSelectedLevelId || 1, Math.max(1, saveDataRef.current.maxLevelReached)));
@@ -681,9 +2947,71 @@ export default function App() {
   }, [purchaseReceipt]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(UI_PREFERENCES_KEY, JSON.stringify({ isMuted }));
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(UI_PREFERENCES_KEY, JSON.stringify({ isMuted }));
   }, [isMuted]);
+
+  useEffect(() => {
+      persistLeaderboardAlias(leaderboardAlias);
+  }, [leaderboardAlias]);
+
+  useEffect(() => {
+      persistLeaderboardRemoteSource(leaderboardRemoteSource);
+  }, [leaderboardRemoteSource]);
+
+  useEffect(() => {
+      persistLeaderboardRemoteSyncAt(leaderboardRemoteSyncAt);
+  }, [leaderboardRemoteSyncAt]);
+
+  useEffect(() => {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(RECOMMENDATION_METRICS_KEY, JSON.stringify(recommendationMetrics));
+  }, [recommendationMetrics]);
+
+  useEffect(() => {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(RECOMMENDATION_TREND_KEY, JSON.stringify(recommendationRunHistory));
+  }, [recommendationRunHistory]);
+
+  useEffect(() => {
+      if (typeof window === 'undefined') return;
+      if (communityBoardEntries.length === 0) {
+          window.localStorage.removeItem(LEADERBOARD_COMMUNITY_STORAGE_KEY);
+          return;
+      }
+
+      const payload: LeaderboardSharePayload = {
+          game: 'Infinite Swinger',
+          version: LEADERBOARD_SHARE_VERSION,
+          sharedAt: Date.now(),
+          alias: 'Community Merge',
+          entries: communityBoardEntries.slice(-COMMUNITY_BOARD_ENTRY_LIMIT).map((entry) => ({
+              playerLabel: entry.playerLabel,
+              score: entry.score,
+              levelId: entry.levelId,
+              levelName: entry.levelName,
+              isWin: entry.isWin,
+              elapsedMs: entry.elapsedMs,
+              tokens: entry.tokens,
+              livesLeft: entry.livesLeft,
+              completedAt: entry.completedAt,
+          })),
+      };
+
+      window.localStorage.setItem(
+          LEADERBOARD_COMMUNITY_STORAGE_KEY,
+          JSON.stringify(payload),
+      );
+  }, [communityBoardEntries]);
+
+  useEffect(() => {
+      recommendationSessionMetricsRef.current = recommendationSessionMetrics;
+  }, [recommendationSessionMetrics]);
+
+  const updateRecommendationMetrics = useCallback((recipe: (prev: RecommendationMetrics) => RecommendationMetrics) => {
+      setRecommendationMetrics((previous) => recipe(previous));
+      setRecommendationSessionMetrics((previous) => recipe(previous));
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -695,10 +3023,11 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const preloadUiSurfaces = () => {
+      const preloadUiSurfaces = () => {
       void import('./components/SettingsModal');
       void import('./components/ui/EndRunModal');
       void import('./components/ui/MenuScreen');
+      void import('./components/ui/LeaderboardScreen');
       void import('./components/ui/ShopScreen');
       void import('./components/ui/StoryMapOverlay');
     };
@@ -919,6 +3248,7 @@ export default function App() {
   }, [commitSaveData, handleSelectLevel]);
 
   const openStoryMap = useCallback(() => {
+      setIsProgressDrawerOpen(false);
       setShowSettings(false);
       setStoryBeatIndex(0);
       setHoveredLevelId(null);
@@ -933,8 +3263,11 @@ export default function App() {
   }, []);
 
   const returnToMainMenu = useCallback(() => {
+      setIsProgressDrawerOpen(false);
       setIsPaused(false);
       setShowSettings(false);
+      setRunAchievementUnlocks([]);
+      setIncomingRouteChallenge(null);
       setGameState(GameState.MENU);
       menuDragRef.current.active = false;
       menuDragRef.current.dragged = false;
@@ -944,11 +3277,136 @@ export default function App() {
       handleSelectLevel(selectedLevelRef.current, { focus: true });
   }, [handleSelectLevel]);
 
+  const openLeaderboardScreen = useCallback(() => {
+      setIsProgressDrawerOpen(false);
+      setGameState(GameState.LEADERBOARD);
+      setIsPaused(false);
+      setShowSettings(false);
+      menuDragRef.current.active = false;
+      menuDragRef.current.dragged = false;
+      menuPanVelocityRef.current = { x: 0, y: 0 };
+      menuFocusTransitionRef.current = null;
+      menuCameraControlModeRef.current = 'auto';
+      const focusLevelId = selectedLevelRef.current || saveDataRef.current.lastSelectedLevelId || 1;
+      if (focusLevelId) {
+          handleSelectLevel(focusLevelId, { focus: true });
+      }
+  }, [handleSelectLevel]);
+
+  useEffect(() => {
+      if (!pendingSharedLeaderboardOpen || !isSaveHydrated) return;
+
+      if (saveDataRef.current.hasCompletedStoryIntro) {
+          openLeaderboardScreen();
+      }
+
+      setPendingSharedLeaderboardOpen(false);
+  }, [isSaveHydrated, openLeaderboardScreen, pendingSharedLeaderboardOpen]);
+
+  const clearRecommendationTrace = useCallback(() => {
+      setRecommendationTrace((current) => {
+          if (!current) return null;
+
+          const now = Date.now();
+          updateRecommendationMetrics((previous) => ({
+              ...previous,
+              skips: previous.skips + 1,
+              skipDelayTotalMs: previous.skipDelayTotalMs + (now - current.offeredAt),
+              skipDelaySamples: previous.skipDelaySamples + 1,
+          }));
+          return null;
+      });
+  }, [updateRecommendationMetrics]);
+
+  const markRecommendationOffer = useCallback((itemId: string, levelId: number, levelName: string) => {
+      const item = SHOP_ITEMS.find((entry) => entry.id === itemId);
+      if (!item) return;
+
+      setRecommendationTrace((current) => {
+          const now = Date.now();
+
+          if (current) {
+              updateRecommendationMetrics((previous) => ({
+                  ...previous,
+                  offers: previous.offers + 1,
+                  skips: previous.skips + 1,
+                  skipDelayTotalMs: previous.skipDelayTotalMs + (now - current.offeredAt),
+                  skipDelaySamples: previous.skipDelaySamples + 1,
+              }));
+          } else {
+              updateRecommendationMetrics((previous) => ({ ...previous, offers: previous.offers + 1 }));
+          }
+          return {
+              itemId,
+              itemName: item.name,
+              levelId,
+              levelName,
+              offeredAt: now,
+              openedAt: null,
+          };
+      });
+  }, [updateRecommendationMetrics]);
+
+  const markRecommendationOpened = useCallback((itemId: string) => {
+      const now = Date.now();
+
+      setRecommendationTrace((current) => {
+          if (!current || current.itemId !== itemId || current.openedAt) return current;
+          updateRecommendationMetrics((previous) => ({
+              ...previous,
+              opens: previous.opens + 1,
+              openDelayTotalMs: previous.openDelayTotalMs + (now - current.offeredAt),
+              openDelaySamples: previous.openDelaySamples + 1,
+          }));
+          return { ...current, openedAt: now };
+      });
+  }, [updateRecommendationMetrics]);
+
+  const markRecommendationPurchase = useCallback((itemId: string) => {
+      const now = Date.now();
+      setRecommendationTrace((current) => {
+          if (!current || current.itemId !== itemId) return current;
+          if (current.openedAt) {
+              const openToBuyMs = now - current.openedAt;
+              updateRecommendationMetrics((previous) => ({
+                  ...previous,
+                  purchases: previous.purchases + 1,
+                  openToBuyTotalMs: previous.openToBuyTotalMs + openToBuyMs,
+                  openToBuySamples: previous.openToBuySamples + 1,
+              }));
+          } else {
+              updateRecommendationMetrics((previous) => ({
+                  ...previous,
+                  purchases: previous.purchases + 1,
+              }));
+          }
+          return null;
+      });
+  }, [updateRecommendationMetrics]);
+
+  const appendRecommendationRunHistory = useCallback(
+      (runId: number, metrics: RecommendationMetrics, outcome: 'win' | 'fail' | null) => {
+      setRecommendationRunHistory((previous) => {
+          const sample = createRecommendationTrendSample(runId, metrics, outcome);
+          return [...previous, sample].slice(-RECOMMENDATION_TREND_HISTORY_SIZE);
+      });
+  }, []);
+
+  const openShopScreen = useCallback((targetItemId: string | null = null) => {
+      setIsProgressDrawerOpen(false);
+      if (targetItemId) {
+          markRecommendationOpened(targetItemId);
+      }
+      setActiveTab('UPGRADES');
+      setRecommendedShopItemId(targetItemId);
+      setGameState(GameState.SHOP);
+  }, [markRecommendationOpened]);
+
   const handleLandingPlay = useCallback(() => {
       if (saveDataRef.current.hasCompletedStoryIntro) {
           setStoryBeatIndex(0);
           setHoveredLevelId(null);
-          handleSelectLevel(Math.max(1, saveDataRef.current.lastSelectedLevelId ?? 1), { focus: true });
+          handleSelectLevel(Math.max(1, selectedLevelRef.current || saveDataRef.current.lastSelectedLevelId || 1), { focus: true });
           setGameState(GameState.MENU);
           return;
       }
@@ -981,6 +3439,378 @@ export default function App() {
       window.URL.revokeObjectURL(url);
       setSaveRecoveryNotice(null);
   }, []);
+
+  const buildRunboardSharePackage = useCallback((aliasOverride?: string) => {
+      if (typeof window === 'undefined') return null;
+
+      const topRuns = selectBestRunPerLevel(saveDataRef.current.runHistory, LEADERBOARD_SHARE_LIMIT);
+
+      if (topRuns.length === 0) return null;
+
+      const alias = normalizeLeaderboardAliasInput(aliasOverride ?? leaderboardAlias);
+      const payload = createCommunitySharePayload(topRuns, alias);
+      const boardCode = encodeLeaderboardPayload(payload);
+      const boardUrl = `${window.location.origin}${window.location.pathname}?${LEADERBOARD_SHARE_QUERY_KEY}=${boardCode}`;
+      const lines = topRuns.map((entry, index) => {
+          const outcome = entry.isWin ? 'WIN' : 'TRY';
+          return `${String(index + 1).padStart(2, '0')}. ${outcome} L${entry.levelId} ${entry.levelName} · ${entry.score} pts · ${entry.tokens} tk · ${entry.livesLeft}L · ${formatDurationMs(entry.elapsedMs)}`;
+      });
+
+      return {
+          alias,
+          boardCode,
+          boardUrl,
+          topRuns,
+          shareText: [
+              `Infinite Swinger Runboard • ${alias}`,
+              `Shared by ${alias} at ${new Date().toLocaleString()}`,
+              `Best level reached: L${saveDataRef.current.maxLevelReached}`,
+              '',
+              `Open this board: ${boardUrl}`,
+              '',
+              ...lines,
+          ].join('\n'),
+      };
+  }, [leaderboardAlias]);
+
+  const buildRunboardCsv = useCallback((aliasOverride?: string) => {
+      const sharePackage = buildRunboardSharePackage(aliasOverride);
+      if (!sharePackage) return null;
+
+      return serializeBoardRowsToDelimitedText(
+          sharePackage.topRuns,
+          () => sharePackage.alias,
+      );
+  }, [buildRunboardSharePackage]);
+
+  const buildRouteChallengeSharePackage = useCallback((routeLevelId: number, aliasOverride?: string) => {
+      const sharePackage = buildRunboardSharePackage(aliasOverride);
+      if (!sharePackage || typeof window === 'undefined') return null;
+
+      const level = LEVELS.find((entry) => entry.id === routeLevelId);
+      if (!level) return null;
+
+      const routeBest =
+          selectBestRunPerLevel(saveDataRef.current.runHistory, LEADERBOARD_SHARE_LIMIT)
+              .find((entry) => entry.levelId === routeLevelId) ?? null;
+      const routeUrl = new URL(sharePackage.boardUrl);
+      routeUrl.searchParams.set(LEADERBOARD_ROUTE_QUERY_KEY, String(routeLevelId));
+      routeUrl.searchParams.set(LEADERBOARD_VIEW_QUERY_KEY, LEADERBOARD_VIEW_LEADERBOARD);
+
+      const routeShareText = [
+          `Infinite Swinger Route Challenge • ${sharePackage.alias}`,
+          `Route: L${level.id} ${level.name}`,
+          routeBest
+              ? `Benchmark: ${routeBest.score} pts · ${routeBest.tokens} tk · ${routeBest.livesLeft}L · ${formatDurationMs(routeBest.elapsedMs)}`
+              : `Focus route only. This board still carries ${sharePackage.topRuns.length} total shared runs.`,
+          '',
+          `Open challenge: ${routeUrl.toString()}`,
+          `Full crew board: ${sharePackage.boardUrl}`,
+      ].join('\n');
+
+      return {
+          ...sharePackage,
+          boardUrl: routeUrl.toString(),
+          routeLevelId,
+          routeName: level.name,
+          routeBest,
+          shareText: routeShareText,
+      };
+  }, [buildRunboardSharePackage]);
+
+  const copyTextWithFallback = useCallback(async (
+      text: string,
+      filenamePrefix: string,
+      successNotice: string,
+      options?: {
+          mimeType?: string;
+          extension?: string;
+          fallbackNotice?: string;
+      },
+  ) => {
+      if (typeof window === 'undefined') return false;
+
+      try {
+          if (navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(text);
+              setSaveRecoveryNotice(successNotice);
+              return true;
+          }
+      } catch (error) {
+          console.warn('Clipboard write failed, using download fallback.', error);
+      }
+
+      const blob = new Blob([text], { type: options?.mimeType ?? 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${filenamePrefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.${options?.extension ?? 'txt'}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      setSaveRecoveryNotice(options?.fallbackNotice ?? 'Clipboard unavailable; export downloaded instead.');
+      return false;
+  }, []);
+
+  const shareRunboard = useCallback(async () => {
+      const sharePackage = buildRunboardSharePackage();
+      if (!sharePackage) {
+          setSaveRecoveryNotice('No runs yet. Finish a route to build a shareable runboard.');
+          return;
+      }
+      const { alias, boardUrl, shareText } = sharePackage;
+
+      const sharePayload = {
+          title: `Infinite Swinger Runboard • ${alias}`,
+          text: shareText,
+          url: boardUrl,
+      };
+
+      try {
+          if (typeof navigator.share === 'function') {
+              await navigator.share(sharePayload);
+              setSaveRecoveryNotice('Runboard shared.');
+              return;
+          }
+      } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          console.warn('Navigator share failed, using clipboard fallback.', error);
+      }
+
+      await copyTextWithFallback(shareText, 'infinite-swinger-runboard', 'Runboard copied to clipboard.');
+  }, [buildRunboardSharePackage, copyTextWithFallback, setSaveRecoveryNotice]);
+
+  const shareRouteChallenge = useCallback(async (routeLevelId: number) => {
+      const sharePackage = buildRouteChallengeSharePackage(routeLevelId);
+      if (!sharePackage) {
+          setSaveRecoveryNotice('No shareable runboard yet. Finish a route first to throw a challenge.');
+          return;
+      }
+
+      const sharePayload = {
+          title: `Infinite Swinger Route Challenge • L${sharePackage.routeLevelId} ${sharePackage.routeName}`,
+          text: sharePackage.shareText,
+          url: sharePackage.boardUrl,
+      };
+
+      try {
+          if (typeof navigator.share === 'function') {
+              await navigator.share(sharePayload);
+              setSaveRecoveryNotice(`Challenge link shared for L${sharePackage.routeLevelId} ${sharePackage.routeName}.`);
+              return;
+          }
+      } catch (error) {
+          console.warn('Navigator share failed for route challenge, using clipboard fallback.', error);
+      }
+
+      await copyTextWithFallback(
+          sharePackage.shareText,
+          `infinite-swinger-route-challenge-l${sharePackage.routeLevelId}`,
+          `Route challenge copied for L${sharePackage.routeLevelId} ${sharePackage.routeName}.`,
+      );
+  }, [buildRouteChallengeSharePackage, copyTextWithFallback, setSaveRecoveryNotice]);
+
+  const copyRunboardShareUrl = useCallback(async () => {
+      const sharePackage = buildRunboardSharePackage();
+      if (!sharePackage) {
+          setSaveRecoveryNotice('No runs yet. Finish a route to build a shareable runboard.');
+          return;
+      }
+
+      await copyTextWithFallback(sharePackage.boardUrl, 'infinite-swinger-runboard-link', 'Runboard link copied.');
+  }, [buildRunboardSharePackage, copyTextWithFallback]);
+
+  const copyRunboardShareCode = useCallback(async () => {
+      const sharePackage = buildRunboardSharePackage();
+      if (!sharePackage) {
+          setSaveRecoveryNotice('No runs yet. Finish a route to build a shareable runboard.');
+          return;
+      }
+
+      await copyTextWithFallback(sharePackage.boardCode, 'infinite-swinger-runboard-code', 'Runboard code copied.');
+  }, [buildRunboardSharePackage, copyTextWithFallback]);
+
+  const copyRunboardCsv = useCallback(async () => {
+      const csv = buildRunboardCsv();
+      if (!csv) {
+          setSaveRecoveryNotice('No runs yet. Finish a route to build a Sheets-ready runboard.');
+          return;
+      }
+
+      await copyTextWithFallback(
+          csv,
+          'infinite-swinger-runboard-sheet',
+          'Runboard CSV copied for Sheets.',
+          {
+              mimeType: 'text/csv;charset=utf-8',
+              extension: 'csv',
+              fallbackNotice: 'Clipboard unavailable; runboard CSV downloaded instead.',
+          },
+      );
+  }, [buildRunboardCsv, copyTextWithFallback]);
+
+  const copyRouteChallengeText = useCallback(async (routeLevelId: number) => {
+      const sharePackage = buildRouteChallengeSharePackage(routeLevelId);
+      if (!sharePackage) {
+          setSaveRecoveryNotice('No shareable runboard yet. Finish a route first to copy a route challenge.');
+          return;
+      }
+
+      await copyTextWithFallback(
+          sharePackage.shareText,
+          `infinite-swinger-route-challenge-l${sharePackage.routeLevelId}-copy`,
+          `Route challenge text copied for L${sharePackage.routeLevelId} ${sharePackage.routeName}.`,
+      );
+  }, [buildRouteChallengeSharePackage, copyTextWithFallback, setSaveRecoveryNotice]);
+
+  const importRunboardFromText = useCallback(async (rawInput?: string) => {
+      const raw = readStringValue(rawInput, '');
+      const parsedInput = parseLeaderboardShareInput(raw);
+      const extractedCode = parsedInput.boardToken;
+
+      if (!extractedCode) {
+          setSaveRecoveryNotice('Paste a leaderboard code, share URL, public Google Sheet, or CSV/TSV board to import.');
+          return;
+      }
+
+      const incomingPayload = decodeLeaderboardPayload(extractedCode);
+      if (!incomingPayload || incomingPayload.entries.length === 0) {
+          const importedDelimitedRows = parseDelimitedBoardEntries(raw);
+          if (importedDelimitedRows.length === 0) {
+              const remoteImport = await fetchRemoteBoardImport(raw);
+              if (remoteImport.kind === 'error') {
+                  setSaveRecoveryNotice(remoteImport.message);
+                  return;
+              }
+
+          if (remoteImport.kind === 'unsupported') {
+              setSaveRecoveryNotice('That input could not be decoded as a runboard, public Google Sheet, or CSV/TSV import.');
+              return;
+          }
+
+          const importedAliasSummary = summarizeImportedBoardRows(remoteImport.rows);
+          setLeaderboardRemoteSource(remoteImport.sourceUrl);
+          setLeaderboardRemoteSyncAt(Date.now());
+          setCommunityBoardEntries((previous) => mergeCommunityBoardRows(previous, remoteImport.rows));
+          setSaveRecoveryNotice(
+                  `Imported ${remoteImport.rows.length} runs from ${importedAliasSummary} via ${remoteImport.sourceLabel}. Rival source saved for quick sync.`,
+              );
+              return;
+          }
+
+          const importedAliasSummary = summarizeImportedBoardRows(importedDelimitedRows);
+          setLeaderboardRemoteSource('');
+          setLeaderboardRemoteSyncAt(null);
+          setCommunityBoardEntries((previous) => mergeCommunityBoardRows(previous, importedDelimitedRows));
+          setSaveRecoveryNotice(`Imported ${importedDelimitedRows.length} runs from ${importedAliasSummary} via CSV/TSV.`);
+          return;
+      }
+
+      setLeaderboardRemoteSource('');
+      setLeaderboardRemoteSyncAt(null);
+
+      const incomingRows: LeaderboardBoardEntry[] = hydrateCommunityBoard(incomingPayload);
+      setCommunityBoardEntries((previous) => mergeCommunityBoardRows(previous, incomingRows));
+      if (parsedInput.routeLevelId !== null) {
+          const routeLevel = LEVELS.find((entry) => entry.id === parsedInput.routeLevelId) ?? null;
+          handleSelectLevel(parsedInput.routeLevelId, { focus: true });
+          setIncomingRouteChallenge({
+              levelId: parsedInput.routeLevelId,
+              challengerAlias: incomingPayload.alias,
+          });
+          setSaveRecoveryNotice(
+              `Imported ${incomingRows.length} runs from ${incomingPayload.alias} and focused ${routeLevel ? `L${routeLevel.id} ${routeLevel.name}` : `L${parsedInput.routeLevelId}`}.`,
+          );
+      } else {
+          setIncomingRouteChallenge(null);
+          setSaveRecoveryNotice(`Imported ${incomingRows.length} runs from ${incomingPayload.alias}.`);
+      }
+
+      if (parsedInput.openLeaderboard) {
+          openLeaderboardScreen();
+      }
+  }, [handleSelectLevel, openLeaderboardScreen, setSaveRecoveryNotice]);
+
+  const importRunboardFromClipboard = useCallback(async () => {
+      if (typeof navigator === 'undefined' || typeof navigator.clipboard?.readText !== 'function') {
+          setSaveRecoveryNotice('Clipboard paste is unavailable here. Paste a runboard link or code manually.');
+          return;
+      }
+
+      try {
+          const clipboardText = await navigator.clipboard.readText();
+          if (!clipboardText.trim()) {
+              setSaveRecoveryNotice('Clipboard is empty. Copy a runboard link or code first.');
+              return;
+          }
+
+          await importRunboardFromText(clipboardText);
+      } catch (error) {
+          console.warn('Failed to read clipboard for runboard import', error);
+          setSaveRecoveryNotice('Clipboard access was blocked. Paste a runboard link or code manually.');
+      }
+  }, [importRunboardFromText, setSaveRecoveryNotice]);
+
+  const clearCommunityRunboard = useCallback(() => {
+      setCommunityBoardEntries([]);
+      setSaveRecoveryNotice('Imported community runs cleared.');
+  }, []);
+
+  const refreshCommunityBoardFromRemoteSource = useCallback(
+      async (showNotice = false) => {
+          const trimmedSource = readStringValue(leaderboardRemoteSource, '').trim();
+          if (!trimmedSource) {
+              if (showNotice) {
+                  setSaveRecoveryNotice(
+                      'No pinned rivalry source yet. Import a public Google Sheet or CSV board once to lock a live rivalry feed.',
+                  );
+              }
+
+              return;
+          }
+
+          const remoteImport = await fetchRemoteBoardImport(trimmedSource);
+          if (remoteImport.kind === 'error') {
+              if (showNotice) {
+                  setSaveRecoveryNotice(remoteImport.message);
+              }
+              return;
+          }
+
+          if (remoteImport.kind === 'unsupported') {
+              if (showNotice) {
+                  setSaveRecoveryNotice('Saved rivalry source is not valid for direct import. Paste it again from the leaderboard screen.');
+              }
+              return;
+          }
+
+          setLeaderboardRemoteSyncAt(Date.now());
+          setCommunityBoardEntries((previous) => mergeCommunityBoardRows(previous, remoteImport.rows));
+
+          if (showNotice) {
+              setSaveRecoveryNotice(
+                  `Rival board refreshed from ${remoteImport.sourceLabel}: ${remoteImport.rows.length} runs merged.`,
+              );
+          }
+      },
+      [leaderboardRemoteSource, setSaveRecoveryNotice],
+  );
+
+  useEffect(() => {
+      if (!isSaveHydrated) return;
+      if (!leaderboardRemoteSource) return;
+      if (typeof window === 'undefined') return;
+
+      void refreshCommunityBoardFromRemoteSource();
+
+      const timerId = window.setInterval(() => {
+          if (document.visibilityState === 'hidden') return;
+          void refreshCommunityBoardFromRemoteSource();
+      }, LEADERBOARD_REMOTE_SYNC_INTERVAL_MS);
+
+      return () => window.clearInterval(timerId);
+  }, [isSaveHydrated, leaderboardRemoteSource, refreshCommunityBoardFromRemoteSource]);
 
   const importSaveBackup = useCallback(async (file: File) => {
       try {
@@ -1245,6 +4075,7 @@ export default function App() {
   
   const weatherRef = useRef<{type: WeatherType, timer: number}>({ type: 'CLEAR', timer: 0 });
   useEffect(() => { weatherRef.current = weather; }, [weather]);
+  const runDebriefRef = useRef<RunDebrief>(createInitialRunDebrief());
   const selectedLevelRef = useRef<number>(1);
   useEffect(() => {
       if (selectedLevelId !== null) selectedLevelRef.current = selectedLevelId;
@@ -1687,6 +4518,7 @@ export default function App() {
       if (item.maxLevel && currentLevel >= item.maxLevel) return;
       if (saveData.totalTokens >= item.cost) {
           if (!isMuted) SoundSynth.playCoin();
+          markRecommendationPurchase(item.id);
           commitSaveData(prev => {
               const newUpgrades = { ...prev.upgrades };
               const newSkins = [...prev.skins];
@@ -1815,6 +4647,11 @@ export default function App() {
     let newRank: SkillRank = 'GROOVIN';
     for (const r of RANKS) { if (total >= r.threshold) { newRank = r.title; break; } }
     chain.rank = newRank;
+    runDebriefRef.current.maxComboMultiplier = Math.max(runDebriefRef.current.maxComboMultiplier, chain.multiplier);
+    if (chain.currentScore >= runDebriefRef.current.maxComboScore) {
+        runDebriefRef.current.maxComboScore = chain.currentScore;
+        runDebriefRef.current.maxComboRank = chain.rank;
+    }
     setSkillChainUI({...chain});
     spawnFloatingText(monkey.current.position.x, monkey.current.position.y - 60, `${name} x${chain.multiplier.toFixed(1)}`, color, 16);
   };
@@ -2099,10 +4936,11 @@ export default function App() {
 
     entity.activated = true;
     entity.color = '#fef08a';
+    const nextActivatedIds = [...new Set([...checkpointRef.current.activatedIds, entity.id])];
     const label = `Checkpoint ${entity.checkpointIndex ?? checkpointRef.current.activatedIds.length + 1}`;
     checkpointRef.current = {
       activeId: entity.id,
-      activatedIds: [...new Set([...checkpointRef.current.activatedIds, entity.id])],
+      activatedIds: nextActivatedIds,
       respawnPosition: {
         x: entity.position.x - 8,
         y: entity.position.y + entity.height + 18,
@@ -2110,6 +4948,7 @@ export default function App() {
       respawnVelocity: { x: 6.2 + (entity.checkpointIndex ?? 1) * 0.25, y: -1.2 },
       label,
     };
+    runDebriefRef.current.checkpointsSecured = nextActivatedIds.length;
     checkpointBannerTimerRef.current = 2.8;
     setCheckpointBanner(label);
     spawnFloatingText(entity.position.x - 12, entity.position.y - 18, label.toUpperCase(), '#fef08a', 22);
@@ -2148,6 +4987,7 @@ export default function App() {
     player.causeOfDeath = '';
     cameraOffset.current.x = Math.max(0, checkpoint.respawnPosition.x - CANVAS_WIDTH * 0.28);
     cameraOffset.current.y = clamp(checkpoint.respawnPosition.y - CANVAS_HEIGHT * 0.48, -500, 820);
+    runDebriefRef.current.redeploys += 1;
     checkpointBannerTimerRef.current = 1.8;
     setCheckpointBanner(`${checkpoint.label} secured`);
     spawnFloatingText(checkpoint.respawnPosition.x, checkpoint.respawnPosition.y - 20, 'REDEPLOYED', '#86efac', 24);
@@ -2169,6 +5009,8 @@ export default function App() {
     const biome = level.biome;
     const isCave = biome === 'CAVE';
     const isVolcano = biome === 'VOLCANO';
+    const routeProgress = getRouteProgress(level);
+    const useLateRouteColorScheme = routeProgress >= ROUTE_PROFILE_THRESHOLD.lateRouteAidCap;
     const beatBias = Math.sin((startX + beatIndex * 111) * 0.0028);
     const safeY = clamp((carriedLaneY ?? (isCave ? 320 : 292)) + beatBias * 26, 118, CANVAS_HEIGHT - 200);
     const highY = clamp(safeY - (beat.anchorPattern === 'slope_launch' ? 156 : 136), 54, CANVAS_HEIGHT - 300);
@@ -2176,9 +5018,30 @@ export default function App() {
     const lowY = clamp(safeY + 126, 210, CANVAS_HEIGHT - 115);
     const rewardY = clamp(lowY - (beat.kind === 'reward' ? 24 : 0), 148, CANVAS_HEIGHT - 126);
     const riskY = clamp((highY + safeY) * 0.5 + (beat.kind === 'hazard' ? -18 : 10), 104, CANVAS_HEIGHT - 180);
-    const branchColor = isVolcano ? '#4b3028' : '#4f5a63';
-    const supportColor = isVolcano ? '#6b412d' : '#6f5b46';
-    const vineColor = isVolcano ? '#f6a75f' : '#8ecabf';
+    const branchColor =
+      biome === 'JUNGLE'
+        ? '#5c4033'
+        : biome === 'SWAMP'
+          ? '#5a4a3c'
+          : isVolcano
+            ? '#4b3028'
+            : '#4f5a63';
+    const supportColor =
+      biome === 'JUNGLE'
+        ? '#72513c'
+        : biome === 'SWAMP'
+          ? '#6d594a'
+          : isVolcano
+            ? '#6b412d'
+            : '#6f5b46';
+    const vineColor =
+      biome === 'JUNGLE'
+        ? '#58d27d'
+        : biome === 'SWAMP'
+          ? '#74d6b3'
+          : isVolcano
+            ? '#f6a75f'
+            : '#8ecabf';
     const routeEndX = startX + 900;
 
     const getLaneY = (lane: RouteLane) => {
@@ -2259,7 +5122,7 @@ export default function App() {
           },
           width: 18,
           height: 18,
-          color: level.id >= 6 ? '#ffb74d' : '#8ef7ff',
+          color: useLateRouteColorScheme ? '#ffb74d' : '#8ef7ff',
           type: 'coin',
           biome,
         });
@@ -2504,6 +5367,12 @@ export default function App() {
 
   const spawnLevelSegment = (startX: number) => {
     const level = LEVELS[selectedLevelRef.current - 1];
+    const segmentSeed = mixSeed(level.id, startX, level.targetDistance, level.difficulty);
+    const segmentRandom = createSeededRandom(segmentSeed);
+    const segmentRandomRange = (min: number, max: number) => segmentRandom() * (max - min) + min;
+    const segmentChance = (probability: number) => segmentRandom() < probability;
+    const segmentInt = (min: number, max: number) => Math.floor(segmentRandomRange(min, max));
+    const segmentPick = <T,>(values: T[]) => values[Math.floor(segmentRandom() * values.length)];
     if (startX > level.targetDistance * 20) {
         if (!entities.current.find(e => e.type === 'portal')) {
             entities.current.push({ id: 'finish-portal', position: { x: level.targetDistance * 20, y: CANVAS_HEIGHT - 300 }, width: 100, height: 200, color: '#00E676', type: 'portal' });
@@ -2513,6 +5382,13 @@ export default function App() {
     }
     const biome = level.biome;
     const difficulty = level.difficulty;
+    const routeSpawnProfile = getRouteSpawnProfile(level);
+    const routeProgress = routeSpawnProfile.routeProgress;
+    const isMicroBranchWindow = routeProgress <= ROUTE_PROFILE_THRESHOLD.microBranchCap;
+    const isHelperBranchWindow = routeProgress <= ROUTE_PROFILE_THRESHOLD.helperBranchCap;
+    const isHazardBranchWindow = routeProgress <= ROUTE_PROFILE_THRESHOLD.hazardBranchCap;
+    const isLateRouteAidWindow = routeProgress <= ROUTE_PROFILE_THRESHOLD.lateRouteAidCap;
+    const useLateRouteColorScheme = routeProgress >= ROUTE_PROFILE_THRESHOLD.lateRouteAidCap;
     const isTutorial = level.tutorialType === 'BASIC';
     const isL2Tutorial = level.tutorialType === 'ADVANCED';
     if (biome !== currentBiomeRef.current) {
@@ -2527,33 +5403,33 @@ export default function App() {
     
     const baseHeight = CANVAS_HEIGHT - 150;
     const heightVar = Math.sin(startX * 0.003) * 100; 
-    const treeHeight = baseHeight + heightVar + randomRange(-360, 340);
+    const treeHeight = baseHeight + heightVar + segmentRandomRange(-360, 340);
     
-    const treeX = startX + randomRange(0, 400);
+    const treeX = startX + segmentRandomRange(0, 400);
 
-    if (isCave && Math.random() < 0.6) {
+    if (isCave && segmentChance(0.6)) {
         const stalactiteY = -50;
-        entities.current.push({ id: `stalactite-${startX}`, position: { x: treeX, y: stalactiteY }, width: 40, height: randomRange(200, 400), color: '#546E7A', type: 'stalactite', biome, polyPoints: createTreePoly(treeX, 0, 'CAVE') });
-        if (Math.random() < 0.4) entities.current.push({ id: `sticky-web-${startX}`, position: { x: treeX + 40, y: stalactiteY + 150 }, width: 100, height: 100, color: 'rgba(255, 255, 255, 0.3)', type: 'web', biome });
+        entities.current.push({ id: `stalactite-${startX}`, position: { x: treeX, y: stalactiteY }, width: 40, height: segmentRandomRange(200, 400), color: '#546E7A', type: 'stalactite', biome, polyPoints: createTreePoly(treeX, 0, 'CAVE') });
+        if (segmentChance(0.4)) entities.current.push({ id: `sticky-web-${startX}`, position: { x: treeX + 40, y: stalactiteY + 150 }, width: 100, height: 100, color: 'rgba(255, 255, 255, 0.3)', type: 'web', biome });
     }
 
-    if (startX > STARTER_ZONE_END && Math.random() < 0.4 && !isTutorial && !isCave) {
+    if (startX > STARTER_ZONE_END && segmentChance(0.4) && !isTutorial && !isCave) {
         entities.current.push({ id: `updraft-${startX}`, position: { x: startX, y: CANVAS_HEIGHT + 600 }, width: 80, height: 800, color: 'rgba(255,255,255,0.1)', type: 'updraft', biome });
     }
 
-    if (startX > STARTER_ZONE_END && isSwamp && Math.random() < 0.3) {
-        if (Math.random() > 0.5) entities.current.push({ id: `waterfall-${startX}`, position: { x: startX + 100, y: -500 }, width: 60, height: 1500, color: 'rgba(33, 150, 243, 0.4)', type: 'waterfall', biome });
-        else entities.current.push({ id: `water_pocket-${startX}`, position: { x: startX + 100, y: CANVAS_HEIGHT - 400 - Math.random() * 200 }, width: randomRange(80, 120), height: randomRange(80, 120), color: 'rgba(1, 87, 155, 0.7)', type: 'water_pocket', biome });
+    if (startX > STARTER_ZONE_END && isSwamp && segmentChance(0.3)) {
+        if (segmentChance(0.5)) entities.current.push({ id: `waterfall-${startX}`, position: { x: startX + 100, y: -500 }, width: 60, height: 1500, color: 'rgba(33, 150, 243, 0.4)', type: 'waterfall', biome });
+        else entities.current.push({ id: `water_pocket-${startX}`, position: { x: startX + 100, y: CANVAS_HEIGHT - 400 - segmentRandom() * 200 }, width: segmentRandomRange(80, 120), height: segmentRandomRange(80, 120), color: 'rgba(1, 87, 155, 0.7)', type: 'water_pocket', biome });
     }
 
     let liquidChance = 0.3;
-    if (isSwamp) liquidChance = 0.8; 
-    if (level.id === 6) liquidChance = 0.9; 
+    if (isSwamp) liquidChance = 0.8;
+    if (routeProgress >= ROUTE_PROFILE_THRESHOLD.lateRouteAidCap) liquidChance = 0.9;
     
-    if (startX > STARTER_ZONE_END && (isSwamp || isVolcano) && Math.random() < liquidChance) {
-        entities.current.push({ id: `fluid-${startX}`, position: { x: startX, y: CANVAS_HEIGHT - 40 }, width: randomRange(150, 400), height: 40, color: isVolcano ? '#D32F2F' : '#2E7D32', type: 'lake', biome });
-        if (isSwamp && Math.random() < 0.5) entities.current.push({ id: `lily-${startX}`, position: { x: startX + randomRange(50, 100), y: CANVAS_HEIGHT - 45 }, width: 60, height: 10, color: '#81C784', type: 'lilypad', biome });
-        if (isVolcano && Math.random() < 0.4) entities.current.push({ id: `magma-rock-${startX}`, position: { x: startX + randomRange(20, 100), y: CANVAS_HEIGHT - 45 }, width: 50, height: 15, color: '#5D4037', type: 'branch', biome, stability: 60 });
+    if (startX > STARTER_ZONE_END && (isSwamp || isVolcano) && segmentChance(liquidChance)) {
+        entities.current.push({ id: `fluid-${startX}`, position: { x: startX, y: CANVAS_HEIGHT - 40 }, width: segmentRandomRange(150, 400), height: 40, color: isVolcano ? '#D32F2F' : '#2E7D32', type: 'lake', biome });
+        if (isSwamp && segmentChance(0.5)) entities.current.push({ id: `lily-${startX}`, position: { x: startX + segmentRandomRange(50, 100), y: CANVAS_HEIGHT - 45 }, width: 60, height: 10, color: '#81C784', type: 'lilypad', biome });
+        if (isVolcano && segmentChance(0.4)) entities.current.push({ id: `magma-rock-${startX}`, position: { x: startX + segmentRandomRange(20, 100), y: CANVAS_HEIGHT - 45 }, width: 50, height: 15, color: '#5D4037', type: 'branch', biome, stability: 60 });
     }
     
     if (!isCave) {
@@ -2561,14 +5437,14 @@ export default function App() {
         entities.current.push({ id: `trunk-${startX}`, position: { x: treeX - 15, y: CANVAS_HEIGHT - treeHeight }, width: 30, height: treeHeight + 3000, color: trunkColor, type: 'tree', health: 100, biome });
 
         let canopyColor = THEME_PROFILES[biome].treeColor;
-        if (biome === 'AUTUMN') canopyColor = Math.random() > 0.5 ? '#D84315' : '#FFAB91';
-        if (isVolcano) canopyColor = Math.random() > 0.7 ? '#4E342E' : '#3E2723';
+        if (biome === 'AUTUMN') canopyColor = segmentChance(0.5) ? '#D84315' : '#FFAB91';
+        if (isVolcano) canopyColor = segmentChance(0.3) ? '#4E342E' : '#3E2723';
         const canopyY = CANVAS_HEIGHT - treeHeight - 80;
         entities.current.push({ id: `canopy-${startX}`, position: { x: treeX - 60, y: canopyY }, width: 120, height: 120, color: canopyColor, type: 'tree', polyPoints: createTreePoly(treeX, CANVAS_HEIGHT - treeHeight + 40, biome), health: 100, biome });
         
-        if (Math.random() < 0.82) entities.current.push({ id: `vine-${startX}`, position: { x: treeX + randomRange(-50, 50), y: canopyY + 56 }, width: 4, height: randomRange(190, 400), color: '#4CAF50', type: 'vine', biome });
-        if (!isTutorial && !isCave && (level.id <= 6 || difficulty <= 3)) {
-            entities.current.push({ id: `support-vine-${startX}`, position: { x: treeX + randomRange(-125, 125), y: canopyY + 24 }, width: 4, height: randomRange(210, 360), color: '#5ecf75', type: 'vine', biome });
+        if (segmentChance(0.82)) entities.current.push({ id: `vine-${startX}`, position: { x: treeX + segmentRandomRange(-50, 50), y: canopyY + 56 }, width: 4, height: segmentRandomRange(190, 400), color: '#4CAF50', type: 'vine', biome });
+    if (!isTutorial && !isCave && (isLateRouteAidWindow || routeSpawnProfile.allowEarlySupportVines)) {
+            entities.current.push({ id: `support-vine-${startX}`, position: { x: treeX + segmentRandomRange(-125, 125), y: canopyY + 24 }, width: 4, height: segmentRandomRange(210, 360), color: '#5ecf75', type: 'vine', biome });
         }
     }
 
@@ -2578,20 +5454,20 @@ export default function App() {
 
     const routeTemplate = getSegmentRouteTemplate(level, startX);
 
-    let numBranches = isTutorial ? 6 : (biome === 'JUNGLE' ? Math.floor(randomRange(7, 10)) : Math.floor(randomRange(7, 10)));
+    let numBranches = isTutorial ? 6 : segmentInt(7, 10);
     if (isL2Tutorial) { const d = startX / 20; if (d > 200 && d < 400) numBranches = 5; }
     if (isCave || isSwamp) numBranches += 1;
-    if (level.id <= 3) numBranches += 1;
+    if (isMicroBranchWindow) numBranches += 1;
     if (routeTemplate === 'recovery') numBranches += 2;
     if (routeTemplate === 'vertical') numBranches += 1;
-    if (routeTemplate === 'hazard' || level.id <= 5) numBranches += 1;
+    if (routeTemplate === 'hazard' || isHazardBranchWindow) numBranches += 1;
     
     const branchSpread = routeTemplate === 'vertical' ? 460 : biome === 'JUNGLE' ? 680 : 430; 
     const gemAnchors: Vector2[] = [];
-    const carriedLaneY = routeLinkRef.current ? clamp(routeLinkRef.current.y + randomRange(-56, 52), 108, CANVAS_HEIGHT - 175) : null;
+    const carriedLaneY = routeLinkRef.current ? clamp(routeLinkRef.current.y + segmentRandomRange(-56, 52), 108, CANVAS_HEIGHT - 175) : null;
 
     if (carriedLaneY !== null && !isTutorial) {
-        const entryBranchWidth = randomRange(150, 194);
+        const entryBranchWidth = segmentRandomRange(150, 194);
         const entryBranchX = startX + 34;
         const entryBranchY = carriedLaneY + 44;
         entities.current.push({
@@ -2620,17 +5496,17 @@ export default function App() {
         }
     }
 
-    if ((biome === 'JUNGLE' || biome === 'SWAMP') && (!isTutorial || level.id <= 3)) {
-        const lowBranchX = treeX + (Math.random() > 0.5 ? 20 : -100);
+    if ((biome === 'JUNGLE' || biome === 'SWAMP') && (!isTutorial || isMicroBranchWindow)) {
+        const lowBranchX = treeX + (segmentChance(0.5) ? 20 : -100);
         const lowBranchY = CANVAS_HEIGHT - 150;
         entities.current.push({ id: `low-branch-${startX}`, position: { x: lowBranchX, y: lowBranchY }, width: 100, height: 15, color: '#5D4037', type: 'branch', biome, stability: 60, isBroken: false });
         gemAnchors.push({ x: lowBranchX + 50, y: lowBranchY - 30 });
     }
 
-    if (!isTutorial && level.id <= 4 && !isCave) {
-        const helperWidth = randomRange(136, 182);
-        const helperX = carriedLaneY !== null ? startX + 120 + randomRange(-25, 45) : treeX + randomRange(-80, 40);
-        const helperY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 170)) + randomRange(-34, 20), 116, CANVAS_HEIGHT - 170);
+    if (!isTutorial && isHelperBranchWindow && !isCave) {
+        const helperWidth = segmentRandomRange(136, 182);
+        const helperX = carriedLaneY !== null ? startX + 120 + segmentRandomRange(-25, 45) : treeX + segmentRandomRange(-80, 40);
+        const helperY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 170)) + segmentRandomRange(-34, 20), 116, CANVAS_HEIGHT - 170);
         entities.current.push({
             id: `guide-branch-${startX}`,
             position: { x: helperX, y: helperY },
@@ -2647,7 +5523,7 @@ export default function App() {
 
     if (!isTutorial && routeTemplate === 'vertical') {
         for (let i = 0; i < 3; i++) {
-            const guideY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 220)) + i * 82 + randomRange(-22, 18), 82, CANVAS_HEIGHT - 120);
+            const guideY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 220)) + i * 82 + segmentRandomRange(-22, 18), 82, CANVAS_HEIGHT - 120);
             const guideX = treeX + (i % 2 === 0 ? 70 : -160);
             const guideWidth = 100 + i * 18;
             entities.current.push({
@@ -2679,11 +5555,11 @@ export default function App() {
         }
     }
 
-    if (!isTutorial && !isCave && (level.id <= 6 || routeTemplate === 'hazard' || routeTemplate === 'speed')) {
+    if (!isTutorial && !isCave && (isLateRouteAidWindow || routeTemplate === 'hazard' || routeTemplate === 'speed')) {
         const rescueVineX = startX + branchSpread * (routeTemplate === 'speed' ? 0.56 : 0.44);
         const rescueVineY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 120)) - 192, 16, CANVAS_HEIGHT - 380);
         const rescueBranchY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 220)) + (routeTemplate === 'vertical' ? 36 : 74), 132, CANVAS_HEIGHT - 165);
-        const rescueBranchWidth = randomRange(124, 172);
+        const rescueBranchWidth = segmentRandomRange(124, 172);
         entities.current.push({
             id: `rescue-vine-${startX}`,
             position: { x: rescueVineX, y: rescueVineY },
@@ -2712,23 +5588,23 @@ export default function App() {
          const depthLevel = b * depthStep;
          const templateWave = routeTemplate === 'vertical' ? Math.sin(b * 1.25) * 36 : routeTemplate === 'speed' ? Math.sin(b * 0.85) * 24 : routeTemplate === 'gem' ? Math.cos(b * 0.9) * 18 : 0;
          const linkedBaseY = carriedLaneY !== null ? carriedLaneY - 148 : CANVAS_HEIGHT - treeHeight + 28;
-         const branchY = clamp(linkedBaseY + depthLevel + templateWave + randomRange(-26, 24), 60, CANVAS_HEIGHT - 68);
-         const dir = routeTemplate === 'speed' ? 1 : routeTemplate === 'recovery' && b % 2 === 0 ? -1 : Math.random() > 0.5 ? 1 : -1;
-         const branchW = routeTemplate === 'speed' ? randomRange(132, 198) : routeTemplate === 'recovery' ? randomRange(110, 172) : randomRange(90, 158);
+         const branchY = clamp(linkedBaseY + depthLevel + templateWave + segmentRandomRange(-26, 24), 60, CANVAS_HEIGHT - 68);
+         const dir = routeTemplate === 'speed' ? 1 : routeTemplate === 'recovery' && b % 2 === 0 ? -1 : segmentChance(0.5) ? 1 : -1;
+         const branchW = routeTemplate === 'speed' ? segmentRandomRange(132, 198) : routeTemplate === 'recovery' ? segmentRandomRange(110, 172) : segmentRandomRange(90, 158);
          const branchX = treeX + (routeTemplate === 'vertical' ? (b % 2 === 0 ? 25 : -branchW + 20) : dir === 1 ? 15 + b * 6 : -branchW + 15 - b * 4); 
          const branchId = `branch-${startX}-${b}`;
          if (branchY > CANVAS_HEIGHT - 50) continue;
 
          entities.current.push({ id: branchId, position: { x: branchX, y: branchY }, width: branchW, height: 15, color: isVolcano ? '#333' : (isWinter ? '#455A64' : '#4E342E'), type: 'branch', biome, stability: isTutorial ? 999 : routeTemplate === 'recovery' ? 48 : 40, isBroken: false });
-         gemAnchors.push({ x: branchX + branchW / 2, y: branchY - randomRange(24, 52) });
-         if (biome === 'JUNGLE' && Math.random() < 0.3) entities.current.push({ id: `flower-${branchId}`, position: { x: branchX + randomRange(10, branchW-10), y: branchY - 10 }, width: 10, height: 10, color: Math.random() > 0.5 ? '#E91E63' : '#9C27B0', type: 'flower', biome });
-         if (biome === 'JUNGLE' && Math.random() < 0.1 && b < 2) entities.current.push({ id: `nest-${branchId}`, position: { x: branchX + branchW/2 - 15, y: branchY - 15 }, width: 30, height: 15, color: '#795548', type: 'nest', biome });
+         gemAnchors.push({ x: branchX + branchW / 2, y: branchY - segmentRandomRange(24, 52) });
+         if (biome === 'JUNGLE' && segmentChance(0.3)) entities.current.push({ id: `flower-${branchId}`, position: { x: branchX + segmentRandomRange(10, branchW-10), y: branchY - 10 }, width: 10, height: 10, color: segmentChance(0.5) ? '#E91E63' : '#9C27B0', type: 'flower', biome });
+         if (biome === 'JUNGLE' && segmentChance(0.1) && b < 2) entities.current.push({ id: `nest-${branchId}`, position: { x: branchX + branchW/2 - 15, y: branchY - 15 }, width: 30, height: 15, color: '#795548', type: 'nest', biome });
     }
 
-    if (!isTutorial && level.id <= 6) {
+    if (!isTutorial && isLateRouteAidWindow) {
         const exitGuideX = startX + branchSpread + 70;
-        const exitGuideY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 190)) + (routeTemplate === 'vertical' ? -72 : routeTemplate === 'hazard' ? 24 : -8) + randomRange(-24, 18), 112, CANVAS_HEIGHT - 175);
-        const exitWidth = randomRange(144, 182);
+        const exitGuideY = clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 190)) + (routeTemplate === 'vertical' ? -72 : routeTemplate === 'hazard' ? 24 : -8) + segmentRandomRange(-24, 18), 112, CANVAS_HEIGHT - 175);
+        const exitWidth = segmentRandomRange(144, 182);
         entities.current.push({
             id: `exit-branch-${startX}`,
             position: { x: exitGuideX, y: exitGuideY },
@@ -2756,35 +5632,40 @@ export default function App() {
 
         routeLinkRef.current = { x: exitGuideX + exitWidth * 0.7, y: exitGuideY - 18 };
     } else {
-        routeLinkRef.current = { x: startX + branchSpread * 0.9, y: clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 170)) + randomRange(-34, 28), 108, CANVAS_HEIGHT - 180) };
+        routeLinkRef.current = { x: startX + branchSpread * 0.9, y: clamp((carriedLaneY ?? (CANVAS_HEIGHT - treeHeight + 170)) + segmentRandomRange(-34, 28), 108, CANVAS_HEIGHT - 180) };
     }
 
-    const gemCount = Math.min(gemAnchors.length, isTutorial ? 4 : Math.floor(randomRange(5, 8)) + (level.difficulty >= 5 ? 1 : 0));
+    const gemCount = Math.min(gemAnchors.length, isTutorial ? 4 : segmentInt(5, 8) + (routeSpawnProfile.includeMidGemBonus ? 1 : 0));
     for (let g = 0; g < gemCount; g++) {
-        const anchor = gemAnchors[Math.floor(Math.random() * gemAnchors.length)];
+        const anchor = segmentPick(gemAnchors);
         if (!anchor) break;
         entities.current.push({
             id: `coin-${startX}-${g}`,
-            position: { x: anchor.x + randomRange(-24, 24), y: anchor.y + randomRange(-14, 14) },
+            position: { x: anchor.x + segmentRandomRange(-24, 24), y: anchor.y + segmentRandomRange(-14, 14) },
             width: 18,
             height: 18,
-            color: level.id >= 6 ? '#ffb74d' : biome === 'SWAMP' ? '#7dd3fc' : '#8ef7ff',
+            color: useLateRouteColorScheme ? '#ffb74d' : biome === 'SWAMP' ? '#7dd3fc' : '#8ef7ff',
             type: 'coin',
             biome,
         });
     }
 
-    const spawnChance = Math.min(0.95, 0.22 + difficulty * 0.115 + (level.id >= 6 ? 0.08 : 0)); 
-    if ((Math.random() < spawnChance && startX > STARTER_ZONE_END && !isTutorial) || (biome === 'JUNGLE' && startX > STARTER_ZONE_END && Math.random() < 0.3 && !isTutorial)) {
-      const allowed: Enemy['enemyType'][] = biome === 'JUNGLE' ? ['bird'] : level.allowedEnemies;
-      if (allowed.length === 0 && biome !== 'JUNGLE') return;
-      const count = difficulty > 6 ? (Math.random() < 0.5 ? 3 : 2) : difficulty > 4 && Math.random() < 0.45 ? 2 : 1; 
+    const spawnChance = routeSpawnProfile.spawnChance;
+    if ((segmentChance(spawnChance) && startX > STARTER_ZONE_END && !isTutorial) || (biome === 'JUNGLE' && startX > STARTER_ZONE_END && segmentChance(0.3) && !isTutorial)) {
+      const enemyWeights = buildRouteEnemyWeights(level, routeSpawnProfile.routeProgress, routeTemplate);
+      if (enemyWeights.length === 0) return;
+      const count = routeSpawnProfile.hasLateThreatWindow
+        ? (segmentChance(0.5) ? 3 : 2)
+        : routeSpawnProfile.hasMidThreatWindow
+        ? (segmentChance(0.45) ? 2 : 1)
+        : 1;
 
       for(let i=0; i<count; i++) {
-        let enemyType = allowed[Math.floor(Math.random() * allowed.length)];
-        if (biome === 'JUNGLE') enemyType = 'bird';
+        const selectedEnemy = pickWeighted(enemyWeights, segmentRandom);
+        if (!selectedEnemy) break;
+        let enemyType = selectedEnemy.enemyType;
 
-        let pos = { x: startX + randomRange(100, 300) + (i*50), y: randomRange(100, 400) };
+        let pos = { x: startX + segmentRandomRange(100, 300) + (i*50), y: segmentRandomRange(100, 400) };
         let vel = { x: -2, y: 0 };
         let anchorX = 0;
 
@@ -2794,14 +5675,14 @@ export default function App() {
         }
 
         if (enemyType === 'spider') {
-            pos.x = treeX + (i*30); pos.y = CANVAS_HEIGHT - treeHeight + randomRange(300, 700); vel.y = 1;
+            pos.x = treeX + (i*30); pos.y = CANVAS_HEIGHT - treeHeight + segmentRandomRange(300, 700); vel.y = 1;
             if (i===0) entities.current.push({ id: `web-${startX}`, position: { x: pos.x - 70, y: pos.y + 50 }, width: 140, height: 140, color: 'rgba(255,255,255,0.4)', type: 'web', biome });
         } else if (enemyType === 'eagle' || enemyType === 'bird') {
-            pos.y = randomRange(40, 300); vel.x = enemyType === 'eagle' ? -3 : -2;
+            pos.y = segmentRandomRange(40, 300); vel.x = enemyType === 'eagle' ? -3 : -2;
         } else if (enemyType === 'troll') {
-            pos.x = startX + randomRange(100, 300); pos.y = 200; anchorX = pos.x; 
+            pos.x = startX + segmentRandomRange(100, 300); pos.y = 200; anchorX = pos.x;
         } else if (enemyType === 'bat') {
-             pos.y = randomRange(50, 200); vel.x = -4; vel.y = 2; 
+             pos.y = segmentRandomRange(50, 200); vel.x = -4; vel.y = 2;
         } else if (enemyType === 'slug') {
              const branch = entities.current.find(e => e.type === 'branch' && e.position.x > startX);
              if (branch) { pos.x = branch.position.x + 10; pos.y = branch.position.y - 20; vel.x = 0.5; vel.y = 0; } else continue; 
@@ -2829,6 +5710,9 @@ export default function App() {
   };
 
   const startGame = useCallback((levelId: number) => {
+    clearRecommendationTrace();
+    recommendationRunIdRef.current += 1;
+    setRecommendationSessionMetrics(EMPTY_RECOMMENDATION_METRICS);
     const level = LEVELS[levelId - 1];
     if (level.id > saveData.maxLevelReached) return;
     musicSessionCounterRef.current += 1;
@@ -2857,14 +5741,14 @@ export default function App() {
     setIsInvincible(false);
     setIsPaused(false);
     setPurchaseReceipt(null);
+    setRunCampaignChallengeResult(null);
+    setRunFeaturedRouteCupResult(null);
     setGameState(GameState.PLAYING);
-    setRunIntroBanner({
-        title: `Level ${level.id} • ${level.name}`,
-        subtitle: level.description,
-    });
-    runIntroBannerTimerRef.current = 2.2;
+    setRunIntroBanner(buildRunIntroBanner(level, saveDataRef.current, communityBoardEntries));
+    runIntroBannerTimerRef.current = 3.4;
     setWeather({ type: level.allowedWeather[0] || 'CLEAR', timer: randomRange(2000, 5000) });
     setSkillChainUI({ active: false, currentScore: 0, multiplier: 1, events: [], timer: 0, rank: 'GROOVIN' });
+    runDebriefRef.current = createInitialRunDebrief();
     focusTimerRef.current = 0;
     focusCooldownRef.current = 0;
     currentBiomeRef.current = level.biome;
@@ -2949,6 +5833,7 @@ export default function App() {
     inputRef.current.keys.up = false;
     inputRef.current.keys.down = false;
     setHideTutorialTips(false);
+    setRunAchievementUnlocks([]);
 
     // Reset Tutorial
     if (level.tutorialType !== 'NONE') {
@@ -2961,11 +5846,27 @@ export default function App() {
     spawnCheckpointStructures(level);
     spawnLevelSegment(STARTER_ZONE_END);
     spawnLevelSegment(STARTER_ZONE_END + 500);
-  }, [commitSaveData, saveData]);
+  }, [clearRecommendationTrace, commitSaveData, communityBoardEntries, saveData]);
+
+  const acceptSharedRouteChallenge = useCallback(
+      (levelId: number) => {
+      const level = LEVELS.find((entry) => entry.id === levelId);
+      if (!level || level.id > saveData.maxLevelReached) {
+          setSaveRecoveryNotice('Complete route unlock progression before accepting this challenge.');
+          return;
+      }
+
+          clearRecommendationTrace();
+          setIncomingRouteChallenge(null);
+          startGame(levelId);
+      },
+      [clearRecommendationTrace, saveData.maxLevelReached, setSaveRecoveryNotice, startGame],
+  );
 
   const handleGameOver = useCallback((isWin: boolean) => {
     if (!isWin) cashOutSkillChain('BANK');
     const currentState = isWin ? GameState.LEVEL_COMPLETE : GameState.GAME_OVER;
+    appendRecommendationRunHistory(recommendationRunIdRef.current, recommendationSessionMetricsRef.current, isWin ? 'win' : 'fail');
     setGameState(currentState);
     if (!isMutedRef.current) {
         if (isWin) {
@@ -2981,7 +5882,73 @@ export default function App() {
     const newHighScore = Math.max(saveDataRef.current.highScore, scoreRef.current);
     const levelId = selectedLevelRef.current;
     const level = LEVELS[levelId - 1];
+    if (!level) return;
     const elapsedMs = Math.round(worldTimeRef.current * 1000);
+    const priorHighestUnlocked = Math.min(saveDataRef.current.maxLevelReached, LEVELS.length);
+    const priorChallenge = buildCampaignChallenge(
+      saveDataRef.current,
+      priorHighestUnlocked,
+      communityBoardEntries,
+    );
+    const priorFeaturedCup = buildFeaturedRouteCup(
+      saveDataRef.current,
+      priorHighestUnlocked,
+      communityBoardEntries,
+    );
+    const priorLevelResult = saveDataRef.current.levelResults[String(levelId)] ?? createEmptyLevelResult();
+    const clearStars = isWin ? computeLevelStars(level, elapsedMs, playerLivesRef.current) : priorLevelResult.stars;
+    const nextLevelResult = {
+      ...priorLevelResult,
+      bestScore: Math.max(priorLevelResult.bestScore, scoreRef.current),
+      bestTimeMs: isWin
+        ? priorLevelResult.bestTimeMs === null
+          ? elapsedMs
+          : Math.min(priorLevelResult.bestTimeMs, elapsedMs)
+        : priorLevelResult.bestTimeMs,
+      firstClearedAt: isWin ? priorLevelResult.firstClearedAt ?? new Date().toISOString() : priorLevelResult.firstClearedAt,
+      stars: Math.max(priorLevelResult.stars, clearStars),
+      clears: priorLevelResult.clears + (isWin ? 1 : 0),
+    };
+    const nextRunHistoryEntry = createRunHistoryEntry(
+        level,
+        isWin,
+        elapsedMs,
+        scoreRef.current,
+        runTokensRef.current,
+        playerLivesRef.current,
+    );
+
+    const nextComputedLevelResults = {
+      ...saveDataRef.current.levelResults,
+      [String(levelId)]: nextLevelResult,
+    };
+    const nextComputedRunHistory = buildRunHistoryArchive([
+      nextRunHistoryEntry,
+      ...saveDataRef.current.runHistory,
+    ]);
+    const nextComputedMaxLevel =
+      isWin && levelId === saveDataRef.current.maxLevelReached && saveDataRef.current.maxLevelReached < LEVELS.length
+        ? saveDataRef.current.maxLevelReached + 1
+        : saveDataRef.current.maxLevelReached;
+    const computedAchievements = resolveMenuAchievements(
+      {
+        ...saveDataRef.current,
+        totalTokens: newTotalTokens,
+        highScore: newHighScore,
+        maxLevelReached: nextComputedMaxLevel,
+        levelResults: nextComputedLevelResults,
+        runHistory: nextComputedRunHistory,
+      },
+      communityBoardEntries,
+    );
+    const previousAchievementIds = new Set(saveDataRef.current.achievements);
+    const nextAchievementIds = computedAchievements.filter((achievement) => achievement.unlocked).map((achievement) => achievement.id);
+    const newlyUnlockedAchievements = computedAchievements
+      .filter((achievement) => achievement.unlocked && !previousAchievementIds.has(achievement.id))
+      .map(({ id, title, detail, progress }) => ({ id, title, detail, progress }));
+
+    setRunAchievementUnlocks(newlyUnlockedAchievements);
+
     if (isWin) {
         const player = monkey.current;
         spawnFloatingText(player.position.x, player.position.y - 72, 'ROUTE SECURED', '#fef08a', 28);
@@ -2994,31 +5961,73 @@ export default function App() {
     commitSaveData(prev => ({
         ...prev,
         totalTokens: newTotalTokens,
+        achievements: nextAchievementIds,
         highScore: newHighScore,
+        runHistory: nextComputedRunHistory,
         maxLevelReached: isWin && levelId === prev.maxLevelReached && prev.maxLevelReached < LEVELS.length
             ? prev.maxLevelReached + 1
             : prev.maxLevelReached,
         levelResults: {
             ...prev.levelResults,
-            [String(levelId)]: (() => {
-                const previous = prev.levelResults[String(levelId)] ?? createEmptyLevelResult();
-                const clearStars = isWin ? computeLevelStars(level, elapsedMs, playerLivesRef.current) : previous.stars;
-                return {
-                    bestScore: Math.max(previous.bestScore, scoreRef.current),
-                    bestTimeMs: isWin
-                        ? previous.bestTimeMs === null
-                            ? elapsedMs
-                            : Math.min(previous.bestTimeMs, elapsedMs)
-                        : previous.bestTimeMs,
-                    firstClearedAt: isWin ? previous.firstClearedAt ?? new Date().toISOString() : previous.firstClearedAt,
-                    stars: Math.max(previous.stars, clearStars),
-                    clears: previous.clears + (isWin ? 1 : 0),
-                };
-            })(),
+            [String(levelId)]: nextLevelResult,
         },
     }));
+    const nextMaxLevel =
+      isWin && levelId === saveDataRef.current.maxLevelReached && saveDataRef.current.maxLevelReached < LEVELS.length
+        ? saveDataRef.current.maxLevelReached + 1
+        : saveDataRef.current.maxLevelReached;
+    const postChallenge = buildCampaignChallenge(
+      {
+        ...saveDataRef.current,
+        highScore: newHighScore,
+        maxLevelReached: nextMaxLevel,
+        totalTokens: newTotalTokens,
+        levelResults: {
+          ...saveDataRef.current.levelResults,
+          [String(levelId)]: nextLevelResult,
+        },
+      },
+      Math.min(nextMaxLevel, LEVELS.length),
+      communityBoardEntries,
+    );
+    const postFeaturedCup = buildFeaturedRouteCup(
+      {
+        ...saveDataRef.current,
+        highScore: newHighScore,
+        maxLevelReached: nextMaxLevel,
+        totalTokens: newTotalTokens,
+        levelResults: {
+          ...saveDataRef.current.levelResults,
+          [String(levelId)]: nextLevelResult,
+        },
+        runHistory: nextComputedRunHistory,
+      },
+      Math.min(nextMaxLevel, LEVELS.length),
+      communityBoardEntries,
+    );
+    const featuredCupOutcome = buildFeaturedRouteCupRunOutcome(
+      levelId,
+      isWin,
+      priorFeaturedCup,
+      postFeaturedCup,
+    );
+    const completedChallenge = priorChallenge.levelId === null
+      ? priorChallenge.progress < priorChallenge.target && postChallenge.progress >= postChallenge.target
+      : priorChallenge.levelId === postChallenge.levelId
+      ? priorChallenge.progress < priorChallenge.target && postChallenge.progress >= postChallenge.target
+      : false;
+    setRunCampaignChallengeResult(
+      completedChallenge
+        ? {
+            title: `Campaign objective complete: ${priorChallenge.title}`,
+            description: `${priorChallenge.note} Objective progress advanced from ${priorChallenge.progress}/${priorChallenge.target} to ${postChallenge.progress}/${postChallenge.target}.`,
+            tone: priorChallenge.tone,
+          }
+        : null,
+    );
+    setRunFeaturedRouteCupResult(featuredCupOutcome);
 
-  }, [commitSaveData]);
+  }, [appendRecommendationRunHistory, commitSaveData, communityBoardEntries, isMuted]);
 
   const takeDamage = (amount: number, cause: string = "Collision") => {
     const player = monkey.current;
@@ -3036,6 +6045,7 @@ export default function App() {
     }
 
     player.lives = Math.max(0, player.lives - damageAmount);
+    runDebriefRef.current.hazardHits += 1;
     playerLivesRef.current = player.lives;
     setPlayerLives(player.lives);
     addShake(10);
@@ -3374,6 +6384,13 @@ export default function App() {
      const focusRegion = storyRegion ?? selectedRegion ?? MAP_REGION_LOOKUP.get('floodline-rise') ?? null;
      const presentation = getEffectiveDisplaySettings(saveData.settings);
      const atlasQuality = atlasPerformanceRef.current.quality;
+     const highestUnlockedLevel = Math.min(saveData.maxLevelReached, LEVELS.length);
+     const routeRivalMarkers = buildRouteRivalMarkers(
+         saveData.runHistory,
+         communityBoardEntries,
+         highestUnlockedLevel,
+         campaignChallenge.levelId,
+     );
      const storyRevealLevel = storyBeat?.revealLevels?.[storyBeat.revealLevels.length - 1] ?? storyBeat?.focusLevelId ?? LEVELS.length;
      const storyHighlights = new Set(storyBeat?.highlightLevelIds ?? []);
      const mapClarity = saveData.settings.mapClarity;
@@ -3765,13 +6782,14 @@ export default function App() {
 
      LEVELS.forEach((level, i) => {
          const { x, y } = getMapNodePosition(i);
-         const isLocked = level.id > saveData.maxLevelReached;
-         const isCurrent = level.id === saveData.maxLevelReached;
+         const isLocked = level.id > highestUnlockedLevel;
+         const isCurrent = level.id === highestUnlockedLevel;
          const isSelected = selectedLevelId === level.id;
          const isHovered = hoveredLevelRef.current === level.id;
          const isStoryFocus = storyBeat?.focusLevelId === level.id;
          const isStoryHighlight = storyHighlights.has(level.id);
          const isStoryVisible = !storyBeat || level.id <= storyRevealLevel;
+         const rivalMarker = routeRivalMarkers.get(level.id) ?? null;
          ctx.beginPath();
          const pulse = Math.sin(now * 0.005);
          const radius =
@@ -3855,6 +6873,32 @@ export default function App() {
              ctx.fillText(label, x, labelY + 15);
              ctx.restore();
          }
+         if (!isLocked && rivalMarker && isStoryVisible) {
+             const chipText = rivalMarker.label.toUpperCase();
+             ctx.save();
+             ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+             const chipPaddingX = 10;
+             const chipWidth = ctx.measureText(chipText).width + chipPaddingX * 2;
+             const chipHeight = rivalMarker.isPriority ? 21 : 18;
+             const chipX = x - chipWidth / 2;
+             const chipY = y - radius - (isSelected || isHovered || isCurrent ? 38 : 24);
+
+             ctx.shadowColor = rivalMarker.tone.glow;
+             ctx.shadowBlur = rivalMarker.isPriority ? 18 : 10;
+             ctx.beginPath();
+             ctx.roundRect(chipX, chipY, chipWidth, chipHeight, chipHeight / 2);
+             ctx.fillStyle = rivalMarker.tone.fill;
+             ctx.fill();
+             ctx.shadowBlur = 0;
+             ctx.strokeStyle = rivalMarker.tone.stroke;
+             ctx.lineWidth = rivalMarker.isPriority ? 1.8 : 1.2;
+             ctx.stroke();
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             ctx.fillStyle = rivalMarker.tone.text;
+             ctx.fillText(chipText, x, chipY + chipHeight / 2 + 0.5);
+             ctx.restore();
+         }
          if (isSelected || isStoryFocus || isHovered || isCurrent) {
              ctx.save();
              ctx.strokeStyle = isSelected ? 'rgba(191, 255, 219, 0.82)' : isStoryFocus ? 'rgba(253, 230, 138, 0.8)' : 'rgba(125, 211, 252, 0.74)';
@@ -3878,6 +6922,70 @@ export default function App() {
          }
      });
      ctx.restore();
+
+     if (gameState === GameState.MENU && routeRivalMarkers.size > 0 && !storyBeat) {
+         const markerLegend = [
+             {
+                 label: 'Scout',
+                 fill: 'rgba(8, 145, 178, 0.9)',
+                 stroke: 'rgba(165, 243, 252, 0.92)',
+             },
+             {
+                 label: 'Chase',
+                 fill: 'rgba(190, 24, 93, 0.88)',
+                 stroke: 'rgba(253, 164, 175, 0.9)',
+             },
+             {
+                 label: 'Lead',
+                 fill: 'rgba(6, 95, 70, 0.88)',
+                 stroke: 'rgba(167, 243, 208, 0.9)',
+             },
+         ];
+         const legendWidth = 244;
+         const legendHeight = 54;
+         const legendX = 38;
+         const legendY = 38;
+
+         ctx.save();
+         ctx.fillStyle = 'rgba(3, 10, 18, 0.72)';
+         ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+         ctx.lineWidth = 1.4;
+         ctx.beginPath();
+         ctx.roundRect(legendX, legendY, legendWidth, legendHeight, 18);
+         ctx.fill();
+         ctx.stroke();
+
+         ctx.textAlign = 'left';
+         ctx.textBaseline = 'alphabetic';
+         ctx.fillStyle = 'rgba(226, 232, 240, 0.66)';
+         ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+         ctx.fillText('ATLAS PRESSURE', legendX + 16, legendY + 16);
+
+         let chipCursorX = legendX + 14;
+         markerLegend.forEach((item) => {
+             ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+             const chipWidth = ctx.measureText(item.label.toUpperCase()).width + 18;
+             const chipY = legendY + 26;
+             ctx.beginPath();
+             ctx.roundRect(chipCursorX, chipY, chipWidth, 16, 8);
+             ctx.fillStyle = item.fill;
+             ctx.fill();
+             ctx.strokeStyle = item.stroke;
+             ctx.stroke();
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             ctx.fillStyle = '#f8fafc';
+             ctx.fillText(item.label.toUpperCase(), chipCursorX + chipWidth / 2, chipY + 8.5);
+             chipCursorX += chipWidth + 8;
+         });
+
+         ctx.textAlign = 'left';
+         ctx.textBaseline = 'alphabetic';
+         ctx.fillStyle = 'rgba(226, 232, 240, 0.58)';
+         ctx.font = `600 ${Math.round(9 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+         ctx.fillText('Imported boards now tag contested routes directly on the atlas.', legendX + 16, legendY + 49);
+         ctx.restore();
+     }
 
      const parallaxX = ((menuCamera.x - DEFAULT_MENU_MAP_CAMERA.x) / MENU_MAP_WORLD_WIDTH) * 120;
      const parallaxY = ((menuCamera.y - DEFAULT_MENU_MAP_CAMERA.y) / MENU_MAP_WORLD_HEIGHT) * 84;
@@ -4804,6 +7912,7 @@ export default function App() {
 
     const speed = Math.hypot(player.velocity.x, player.velocity.y);
     if (speed > player.maxSpeedAchieved) player.maxSpeedAchieved = speed;
+    if (speed > runDebriefRef.current.peakSpeed) runDebriefRef.current.peakSpeed = speed;
     const tuning = runtimeSettingsRef.current;
     if (player.releaseTetherTimer > 0) {
         player.releaseTetherTimer = Math.max(0, player.releaseTetherTimer - dt);
@@ -5008,6 +8117,7 @@ export default function App() {
         } else {
              player.velocity.y = -25;
              player.hasUsedNet = true;
+             runDebriefRef.current.usedSafetyNet = true;
              spawnFloatingText(player.position.x, player.position.y, "SAFETY NET!", "#4CAF50", 30);
              if (!muted) SoundSynth.playJump();
         }
@@ -5413,6 +8523,7 @@ export default function App() {
               player.velocity.y = Math.min(player.velocity.y, -jumpPower * jumpDecay);
               player.grounded = false;
               player.coyoteTimer = 0;
+              runDebriefRef.current.jumpsUsed += 1;
               player.jumpRechargeTimer = player.jumpCharges === 0
                   ? Math.max(1.3, JUMP_RECHARGE_SECONDS - saveDataRef.current.upgrades.launchBoost * JUMP_COOLDOWN_REDUCTION_PER_LEVEL - saveDataRef.current.upgrades.airControl * 0.08)
                   : player.jumpRechargeTimer;
@@ -5795,11 +8906,21 @@ export default function App() {
   const selectedLevel = selectedLevelId !== null ? LEVELS[selectedLevelId - 1] ?? null : null;
   const selectedLevelResult = selectedLevel ? saveData.levelResults[String(selectedLevel.id)] ?? createEmptyLevelResult() : null;
   const highestUnlockedLevel = Math.min(saveData.maxLevelReached, LEVELS.length);
+  const incomingLandingChallenge = incomingRouteChallenge
+    ? LEVELS.find((entry) => entry.id === incomingRouteChallenge.levelId) ?? null
+    : null;
   const selectedLevelLocked = selectedLevel ? selectedLevel.id > highestUnlockedLevel : true;
+  const campaignChallenge = buildCampaignChallenge(saveData, highestUnlockedLevel, communityBoardEntries);
+  const featuredRouteCup = buildFeaturedRouteCup(saveData, highestUnlockedLevel, communityBoardEntries);
+  const menuAchievements = resolveMenuAchievements(saveData, communityBoardEntries);
+  const runConsistency = computeRunWinStreaks(saveData.runHistory);
+  const leaderboardSharePackage = buildRunboardSharePackage();
   const hasNextUnlockedLevel = selectedLevelRef.current < highestUnlockedLevel;
   const bestScore = Math.max(saveData.highScore, score);
   const currentPlayer = monkey.current;
   const previewLevel = selectedLevel ?? LEVELS[selectedLevelRef.current - 1] ?? LEVELS[0];
+  const activeRoutePressure = buildActiveRoutePressure(previewLevel, saveData.runHistory, communityBoardEntries, score);
+  const activeFeaturedRoutePressure = buildActiveFeaturedCupPressure(previewLevel, featuredRouteCup, score);
   const activeRouteBeat = getScriptedRouteBeat(previewLevel, currentPlayer.position.x);
   const currentBuildSummary = getCurrentBuildSummary(saveData, selectedLevel);
   const currentStoryBeat = INTRO_STORY_SEQUENCE.beats[storyBeatIndex] ?? INTRO_STORY_SEQUENCE.beats[0];
@@ -5826,6 +8947,66 @@ export default function App() {
   const paceToneClass = paceSpeed > 28 ? 'text-amber-200' : paceSpeed > 18 ? 'text-emerald-200' : 'text-slate-200';
   const isCompactHud = saveData.settings.hudDensity === 'compact';
   const isHudHidden = saveData.settings.hudDensity === 'hidden';
+  const activeRoutePressureTone = getRoutePressureToneClass(activeRoutePressure?.tone ?? 'emerald');
+  const featuredRoutePressureTone = getRoutePressureToneClass(activeFeaturedRoutePressure?.tone ?? 'emerald');
+  const recommendationActionRate = recommendationSessionMetrics.offers > 0
+    ? Math.round((recommendationSessionMetrics.purchases / recommendationSessionMetrics.offers) * 100)
+    : 0;
+  const isVictory = gameState === GameState.LEVEL_COMPLETE;
+  const recommendationAverageOpenToBuySeconds = recommendationSessionMetrics.openToBuySamples > 0
+    ? Math.round((recommendationSessionMetrics.openToBuyTotalMs / recommendationSessionMetrics.openToBuySamples) / 1000)
+    : null;
+  const recommendationAverageOpenDelaySeconds = recommendationSessionMetrics.openDelaySamples > 0
+    ? Math.round((recommendationSessionMetrics.openDelayTotalMs / recommendationSessionMetrics.openDelaySamples) / 1000)
+    : null;
+  const recommendationAverageSkipDelaySeconds = recommendationSessionMetrics.skipDelaySamples > 0
+    ? Math.round((recommendationSessionMetrics.skipDelayTotalMs / recommendationSessionMetrics.skipDelaySamples) / 1000)
+    : null;
+  const recommendationDiagnostics = {
+    offers: recommendationSessionMetrics.offers,
+    opens: recommendationSessionMetrics.opens,
+    purchases: recommendationSessionMetrics.purchases,
+    skips: recommendationSessionMetrics.skips,
+    acceptanceRate: recommendationActionRate,
+    avgOpenToBuySeconds: recommendationAverageOpenToBuySeconds,
+    avgOpenDelaySeconds: recommendationAverageOpenDelaySeconds,
+    avgSkipDelaySeconds: recommendationAverageSkipDelaySeconds,
+  };
+  const recommendationTrendCurrentSample = createRecommendationTrendSample(
+      recommendationRunIdRef.current,
+      recommendationSessionMetrics,
+      isVictory ? 'win' : 'fail',
+  );
+  const recommendationHistoryForTrend = recommendationRunHistory.some(
+      (entry) => entry.runId === recommendationTrendCurrentSample.runId,
+  )
+      ? recommendationRunHistory
+      : [...recommendationRunHistory, recommendationTrendCurrentSample];
+  const recommendationRollingSamples = recommendationHistoryForTrend.slice(
+      -RECOMMENDATION_TREND_WINDOW_SIZE,
+  );
+  const recommendationPriorSamples = recommendationHistoryForTrend.length > RECOMMENDATION_TREND_WINDOW_SIZE
+      ? recommendationHistoryForTrend.slice(
+            -RECOMMENDATION_TREND_WINDOW_SIZE * 2,
+            -RECOMMENDATION_TREND_WINDOW_SIZE,
+        )
+      : [];
+  const recommendationCurrentSummary = summarizeRecommendationTrendSamples([recommendationTrendCurrentSample]);
+  const recommendationRollingSummary = summarizeRecommendationTrendSamplesByOutcome(recommendationRollingSamples);
+  const recommendationPriorSummary = recommendationPriorSamples.length > 0
+      ? summarizeRecommendationTrendSamplesByOutcome(recommendationPriorSamples)
+      : null;
+  const recommendationTrend = {
+    current: recommendationCurrentSummary,
+    rolling: recommendationRollingSummary,
+    prior: recommendationPriorSummary,
+    rollingRuns: recommendationRollingSamples.length,
+    priorRuns: recommendationPriorSamples.length,
+    rollingWinRuns: recommendationRollingSummary.win.runSamples,
+    rollingFailRuns: recommendationRollingSummary.fail.runSamples,
+    priorWinRuns: recommendationPriorSummary?.win.runSamples ?? 0,
+    priorFailRuns: recommendationPriorSummary?.fail.runSamples ?? 0,
+  };
 
   if (!isSaveHydrated) {
       return (
@@ -5888,6 +9069,17 @@ export default function App() {
         <LandingScreen
           hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
           highestUnlockedLevel={highestUnlockedLevel}
+          landingChallenge={
+            incomingLandingChallenge
+              ? {
+                  levelId: incomingLandingChallenge.id,
+                  levelName: incomingLandingChallenge.name,
+                  challengerAlias: incomingRouteChallenge?.challengerAlias ?? 'Rival crew',
+                  isUnlocked: incomingLandingChallenge.id <= highestUnlockedLevel,
+                }
+              : null
+          }
+          onAcceptChallenge={incomingRouteChallenge ? () => acceptSharedRouteChallenge(incomingRouteChallenge.levelId) : null}
           onPlay={handleLandingPlay}
           onOpenStory={openStoryMap}
         />
@@ -5983,7 +9175,90 @@ export default function App() {
                        <div className="min-w-[168px] rounded-2xl border border-sky-200/15 bg-slate-950/55 backdrop-blur-md p-3 text-right flex flex-col items-end shadow-2xl shadow-black/20">
                             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-300"><Wind size={16}/> Weather</div>
                             <div className="font-bold text-sky-300 text-lg">{((currentBiome === 'JUNGLE' || currentBiome === 'SWAMP') && (weather.type === 'RAIN' || weather.type === 'WINDY')) ? 'MONSOON' : weather.type}</div>
-                       </div>
+                        </div>
+                       {activeFeaturedRoutePressure && (
+                           <div className={`min-w-[220px] rounded-2xl border ${featuredRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
+                               <div className="flex items-center justify-between gap-3">
+                                   <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">Daily Crew Cup</div>
+                                   <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                                       {previewLevel.name}
+                                   </div>
+                               </div>
+                               <div className="mt-1 text-base font-black text-white">{activeFeaturedRoutePressure.title}</div>
+                               <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeFeaturedRoutePressure.detail}</div>
+                               <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                   <span>{activeFeaturedRoutePressure.statusLabel}</span>
+                                   <span>{activeFeaturedRoutePressure.countdownLabel}</span>
+                               </div>
+                               {activeFeaturedRoutePressure.targetScore ? (
+                                   <>
+                                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
+                                           <div
+                                               className={`h-full transition-all ${activeFeaturedRoutePressure.tone === 'rose'
+                                                   ? 'bg-rose-400'
+                                                   : activeFeaturedRoutePressure.tone === 'cyan'
+                                                       ? 'bg-cyan-300'
+                                                       : activeFeaturedRoutePressure.tone === 'amber'
+                                                           ? 'bg-amber-300'
+                                                           : 'bg-emerald-400'
+                                               }`}
+                                               style={{ width: `${activeFeaturedRoutePressure.progressPercent}%` }}
+                                           />
+                                       </div>
+                                       <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                           <span>{activeFeaturedRoutePressure.targetLabel}</span>
+                                           <span>
+                                               {activeFeaturedRoutePressure.gapScore !== null
+                                                   ? activeFeaturedRoutePressure.gapScore >= 0
+                                                       ? `+${activeFeaturedRoutePressure.gapScore}`
+                                                       : `${activeFeaturedRoutePressure.gapScore}`
+                                                   : '--'}
+                                           </span>
+                                       </div>
+                                   </>
+                               ) : null}
+                           </div>
+                       )}
+                       {activeRoutePressure && (
+                           <div className={`min-w-[220px] rounded-2xl border ${activeRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
+                               <div className="flex items-center justify-between gap-3">
+                                   <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">{activeRoutePressure.label}</div>
+                                   <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                                       {previewLevel.name}
+                                   </div>
+                               </div>
+                               <div className="mt-1 text-base font-black text-white">{activeRoutePressure.title}</div>
+                               <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeRoutePressure.detail}</div>
+                               {activeRoutePressure.targetScore ? (
+                                   <>
+                                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
+                                           <div
+                                               className={`h-full transition-all ${
+                                                   activeRoutePressure.tone === 'rose'
+                                                       ? 'bg-rose-400'
+                                                       : activeRoutePressure.tone === 'cyan'
+                                                           ? 'bg-cyan-300'
+                                                           : activeRoutePressure.tone === 'amber'
+                                                               ? 'bg-amber-300'
+                                                               : 'bg-emerald-400'
+                                               }`}
+                                               style={{ width: `${activeRoutePressure.progressPercent}%` }}
+                                           />
+                                       </div>
+                                       <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                           <span>Target {activeRoutePressure.targetScore}</span>
+                                           <span>
+                                               {activeRoutePressure.gapScore !== null
+                                                   ? activeRoutePressure.gapScore >= 0
+                                                       ? `+${activeRoutePressure.gapScore}`
+                                                       : `${activeRoutePressure.gapScore}`
+                                                   : '--'}
+                                           </span>
+                                       </div>
+                                   </>
+                               ) : null}
+                           </div>
+                       )}
                        
                        {/* SKILL CHAIN */}
                        {skillChainUI.active && (
@@ -6025,10 +9300,127 @@ export default function App() {
 
               {runIntroBannerTimerRef.current > 0 && runIntroBanner && (
                   <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-center px-6">
-                      <div className="max-w-2xl rounded-[1.6rem] border border-white/15 bg-slate-950/78 px-8 py-6 text-center shadow-2xl shadow-black/40 backdrop-blur-md">
-                          <div className="atlas-map-label text-[11px] uppercase tracking-[0.4em] text-emerald-200/70">Route Start</div>
-                          <div className="atlas-title mt-3 text-4xl text-white">{runIntroBanner.title}</div>
-                          <div className="atlas-panel-copy mt-3 text-base text-slate-300">{runIntroBanner.subtitle}</div>
+                      <div className="w-full max-w-4xl overflow-hidden rounded-[1.9rem] border border-white/15 bg-slate-950/86 shadow-2xl shadow-black/45 backdrop-blur-md">
+                          <div className="grid items-stretch gap-0 lg:grid-cols-[minmax(0,1.05fr),minmax(320px,0.95fr)]">
+                              <div className="relative overflow-hidden border-b border-white/10 lg:border-b-0 lg:border-r">
+                                  <svg className="h-full min-h-[280px] w-full" viewBox="0 0 640 360" aria-hidden="true" role="presentation">
+                                      <defs>
+                                          <linearGradient id="run-intro-sky" x1="0" y1="0" x2="0" y2="1">
+                                              <stop offset="0%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].skyFrom} />
+                                              <stop offset="100%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].skyTo} />
+                                          </linearGradient>
+                                          <radialGradient id="run-intro-glow" cx="54%" cy="28%" r="48%">
+                                              <stop offset="0%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].glow} stopOpacity="0.92" />
+                                              <stop offset="100%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].glow} stopOpacity="0" />
+                                          </radialGradient>
+                                      </defs>
+                                      <rect x="0" y="0" width="640" height="360" fill="url(#run-intro-sky)" />
+                                      <ellipse cx="340" cy="98" rx="176" ry="94" fill="url(#run-intro-glow)">
+                                          <animate attributeName="ry" values="90;104;90" dur="4s" repeatCount="indefinite" />
+                                      </ellipse>
+                                      <path d="M0 254C88 214 162 208 234 238C304 268 384 276 470 240C530 214 582 214 640 242V360H0Z" fill={STORY_SCENE_PALETTE[runIntroBanner.scene].ridge} opacity="0.94" />
+                                      <path d="M0 300C104 276 194 274 286 294C372 312 462 320 548 300C582 292 612 292 640 300V360H0Z" fill="#09111f" opacity="0.86" />
+                                      <path d="M124 92L132 292" stroke="#1f2937" strokeWidth="18" strokeLinecap="round" />
+                                      <path d="M132 128C164 120 194 106 220 82" stroke="#27473a" strokeWidth="12" strokeLinecap="round" />
+                                      <path d="M520 102L510 300" stroke="#1f2937" strokeWidth="18" strokeLinecap="round" />
+                                      <path d="M510 138C470 130 430 114 392 84" stroke="#263646" strokeWidth="12" strokeLinecap="round" />
+                                      <path d="M176 104C246 114 302 158 344 214" fill="none" stroke={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} strokeWidth="5.5" strokeLinecap="round" strokeDasharray="10 10">
+                                          <animate attributeName="stroke-dashoffset" values="0;-80" dur="2.8s" repeatCount="indefinite" />
+                                      </path>
+                                      <g transform="translate(0 0)">
+                                          <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="3s" repeatCount="indefinite" />
+                                          <path d="M350 218C366 194 382 186 400 189C418 192 434 204 444 226C414 242 382 250 352 248C350 240 350 228 350 218Z" fill="#0b1020" />
+                                          <circle cx="384" cy="174" r="23" fill="#0b1020" />
+                                          <circle cx="394" cy="167" r="6" fill={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} />
+                                          <path d="M372 196L362 248" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                          <path d="M396 198L430 244" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                          <path d="M352 220L304 236" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                          <path d="M432 222L474 188" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                          <path d="M474 188L510 144" stroke={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} strokeWidth="6" strokeLinecap="round" />
+                                      </g>
+                                  </svg>
+                                  <div className="absolute left-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
+                                      {runIntroBanner.kicker}
+                                  </div>
+                                  <div className="absolute right-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
+                                      {runIntroBanner.speaker}
+                                  </div>
+                                  {(runIntroBanner.characterId || runIntroBanner.supportCharacterId) ? (
+                                      <div className="absolute bottom-5 right-5 flex items-end -space-x-3">
+                                          {runIntroBanner.supportCharacterId ? (
+                                              <StoryCastPortrait
+                                                  characterId={runIntroBanner.supportCharacterId}
+                                                  scene={runIntroBanner.scene}
+                                                  size={56}
+                                                  priority="support"
+                                                  className="mb-5"
+                                              />
+                                          ) : null}
+                                          {runIntroBanner.characterId ? (
+                                              <StoryCastPortrait
+                                                  characterId={runIntroBanner.characterId}
+                                                  scene={runIntroBanner.scene}
+                                                  size={72}
+                                                  priority="primary"
+                                              />
+                                          ) : null}
+                                      </div>
+                                  ) : null}
+                                  <div className="absolute bottom-5 left-5 max-w-[82%] rounded-[1.1rem] border border-white/15 bg-slate-950/80 px-4 py-3 shadow-2xl shadow-black/40">
+                                      <div className="text-[10px] font-black uppercase tracking-[0.28em] text-white/45">{runIntroBanner.accentWord}</div>
+                                      <div className="mt-1 text-sm font-semibold leading-relaxed text-white">{runIntroBanner.caption}</div>
+                                  </div>
+                              </div>
+
+                              <div className="flex flex-col justify-center px-6 py-5 lg:px-7">
+                                  <div className="atlas-map-label text-[11px] uppercase tracking-[0.34em] text-emerald-200/70">Route Briefing</div>
+                                  <div className="atlas-title mt-2 text-4xl text-white">{runIntroBanner.title}</div>
+                                  <div className="atlas-panel-copy mt-3 text-base leading-relaxed text-slate-300">{runIntroBanner.subtitle}</div>
+
+                                  {runIntroBanner.characterId ? (
+                                      <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                                          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-white/45">Crew lead</div>
+                                          <div className="mt-3 flex flex-wrap gap-3">
+                                              <StoryCastPortrait
+                                                  characterId={runIntroBanner.characterId}
+                                                  scene={runIntroBanner.scene}
+                                                  size={64}
+                                                  showLabel
+                                              />
+                                              {runIntroBanner.supportCharacterId ? (
+                                                  <StoryCastPortrait
+                                                      characterId={runIntroBanner.supportCharacterId}
+                                                      scene={runIntroBanner.scene}
+                                                      size={56}
+                                                      showLabel
+                                                  />
+                                              ) : null}
+                                          </div>
+                                          {getStoryCharacterProfile(runIntroBanner.characterId) ? (
+                                              <div className="mt-3 text-sm leading-relaxed text-slate-300">
+                                                  {getStoryCharacterProfile(runIntroBanner.characterId)?.shortBio}
+                                              </div>
+                                          ) : null}
+                                      </div>
+                                  ) : null}
+
+                                  <div className="mt-5 rounded-[1.2rem] border border-emerald-200/15 bg-emerald-500/10 px-4 py-3">
+                                      <div className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-100/75">Mission</div>
+                                      <div className="mt-1 text-lg font-black text-white">{runIntroBanner.missionTitle}</div>
+                                      <div className="mt-1 text-sm leading-relaxed text-emerald-50/85">{runIntroBanner.missionDetail}</div>
+                                  </div>
+
+                                  <div className="mt-3 rounded-[1.2rem] border border-cyan-200/15 bg-cyan-500/10 px-4 py-3">
+                                      <div className="flex items-center justify-between gap-3">
+                                          <div className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-100/80">Rival Pressure</div>
+                                          <div className="rounded-full border border-cyan-200/20 bg-slate-950/55 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-100">
+                                              {runIntroBanner.rivalStatus}
+                                          </div>
+                                      </div>
+                                      <div className="mt-2 text-sm leading-relaxed text-slate-200">{runIntroBanner.rivalDetail}</div>
+                                  </div>
+                              </div>
+                          </div>
                       </div>
                   </div>
               )}
@@ -6174,37 +9566,168 @@ export default function App() {
 
       {/* MENU UI OVERLAY */}
       {gameState === GameState.MENU && (
-        <Suspense fallback={<SurfaceLoader label="Loading route map" />}>
-          <MenuScreen
-            saveData={saveData}
-            selectedLevel={selectedLevel}
-            selectedLevelResult={selectedLevelResult}
-            selectedLevelLocked={selectedLevelLocked}
+        <>
+          <ProgressSidebar
+            levels={LEVELS}
+            levelResults={saveData.levelResults}
             highestUnlockedLevel={highestUnlockedLevel}
-            hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
-            isMuted={isMuted}
-            isFullscreen={isFullscreen}
-            currentBuild={currentBuildSummary}
-            weatherLabels={WEATHER_LABELS}
-            enemyLabels={ENEMY_LABELS}
-            onStartGame={() => {
-              if (selectedLevel) startGame(selectedLevel.id);
+            selectedLevelId={selectedLevelId ?? 1}
+            runHistory={saveData.runHistory}
+            communityRunHistory={communityBoardEntries}
+            achievements={menuAchievements}
+            currentStreak={runConsistency.current}
+            bestStreak={runConsistency.best}
+            campaignChallenge={campaignChallenge}
+            featuredRouteCup={featuredRouteCup}
+            onOpenLeaderboard={openLeaderboardScreen}
+            onShareRunboard={shareRunboard}
+            leaderboardRemoteSource={leaderboardRemoteSource}
+            leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
+            onRefreshCommunityBoard={() => {
+                void refreshCommunityBoardFromRemoteSource(true);
             }}
-            onOpenShop={() => setGameState(GameState.SHOP)}
+            onShareRouteChallenge={(levelId) => {
+              clearRecommendationTrace();
+              void shareRouteChallenge(levelId);
+            }}
+            onCopyRouteChallenge={copyRouteChallengeText}
+            onSelectLevel={(levelId) => {
+              handleSelectLevel(levelId, { focus: true });
+              setSelectedLevelId(levelId);
+              selectedLevelRef.current = levelId;
+            }}
+          />
+          <ProgressSidebar
+            levels={LEVELS}
+            levelResults={saveData.levelResults}
+            highestUnlockedLevel={highestUnlockedLevel}
+            selectedLevelId={selectedLevelId ?? 1}
+            runHistory={saveData.runHistory}
+            communityRunHistory={communityBoardEntries}
+            achievements={menuAchievements}
+            currentStreak={runConsistency.current}
+            bestStreak={runConsistency.best}
+            campaignChallenge={campaignChallenge}
+            featuredRouteCup={featuredRouteCup}
+            variant="drawer"
+            isOpen={isProgressDrawerOpen}
+            onClose={() => setIsProgressDrawerOpen(false)}
+            onOpenLeaderboard={openLeaderboardScreen}
+            onShareRunboard={shareRunboard}
+            leaderboardRemoteSource={leaderboardRemoteSource}
+            leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
+            onRefreshCommunityBoard={() => {
+                void refreshCommunityBoardFromRemoteSource(true);
+            }}
+            onShareRouteChallenge={(levelId) => {
+              clearRecommendationTrace();
+              void shareRouteChallenge(levelId);
+            }}
+            onCopyRouteChallenge={copyRouteChallengeText}
+            onSelectLevel={(levelId) => {
+              handleSelectLevel(levelId, { focus: true });
+              setSelectedLevelId(levelId);
+              selectedLevelRef.current = levelId;
+            }}
+          />
+          <Suspense fallback={<SurfaceLoader label="Loading route map" />}>
+            <MenuScreen
+              saveData={saveData}
+              selectedLevel={selectedLevel}
+              selectedLevelResult={selectedLevelResult}
+              selectedLevelLocked={selectedLevelLocked}
+              highestUnlockedLevel={highestUnlockedLevel}
+              challengeRouteId={incomingRouteChallenge?.levelId ?? null}
+              challengeAlias={incomingRouteChallenge?.challengerAlias ?? null}
+              communityRunHistory={communityBoardEntries}
+              hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
+              isMuted={isMuted}
+              isFullscreen={isFullscreen}
+              currentBuild={currentBuildSummary}
+              weatherLabels={WEATHER_LABELS}
+              enemyLabels={ENEMY_LABELS}
+              onStartGame={() => {
+                if (selectedLevel) startGame(selectedLevel.id);
+                if (selectedLevel && incomingRouteChallenge?.levelId === selectedLevel.id) {
+                    setIncomingRouteChallenge(null);
+                }
+              }}
+              featuredRouteCup={featuredRouteCup}
+              onOpenShop={() => openShopScreen()}
+              onOpenLeaderboard={openLeaderboardScreen}
+              onOpenStory={openStoryMap}
+              onOpenProgressDrawer={() => setIsProgressDrawerOpen(true)}
+              onOpenSettings={() => openSettings()}
+              campaignChallenge={campaignChallenge}
+              onFocusChallengeLevel={(levelId) => {
+                  handleSelectLevel(levelId, { focus: true });
+                  setSelectedLevelId(levelId);
+                  selectedLevelRef.current = levelId;
+              }}
+              onAcceptChallenge={incomingRouteChallenge ? acceptSharedRouteChallenge : undefined}
+              onFocusFeaturedRoute={(levelId) => {
+                  handleSelectLevel(levelId, { focus: true });
+                  setSelectedLevelId(levelId);
+                  selectedLevelRef.current = levelId;
+              }}
+              onToggleMute={toggleMute}
+              onToggleFullscreen={toggleFullscreen}
+              onShareRunboard={shareRunboard}
+              onCenterSelected={() => {
+                  if (selectedLevelRef.current !== null) {
+                      handleSelectLevel(selectedLevelRef.current, { focus: true });
+                  }
+              }}
+              onZoomIn={() => adjustMenuZoom(0.045)}
+              onZoomOut={() => adjustMenuZoom(-0.045)}
+              onResetView={resetMenuView}
+            />
+          </Suspense>
+        </>
+      )}
+
+      {gameState === GameState.LEADERBOARD && (
+        <Suspense fallback={<SurfaceLoader label="Loading leaderboard" />}>
+            <LeaderboardScreen
+            localRunHistory={saveData.runHistory}
+            communityRunHistory={communityBoardEntries}
+            maxLevelReached={saveData.maxLevelReached}
+            defaultFocusedLevelId={selectedLevelRef.current}
+            leaderboardRemoteSource={leaderboardRemoteSource}
+            leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
+            challengeRouteId={incomingRouteChallenge?.levelId}
+            challengeAlias={incomingRouteChallenge?.challengerAlias}
+            boardAlias={leaderboardAlias}
+            shareCode={leaderboardSharePackage?.boardCode ?? ''}
+            shareUrl={leaderboardSharePackage?.boardUrl ?? ''}
+            shareEntryCount={leaderboardSharePackage?.topRuns.length ?? 0}
+            onReturnToMenu={returnToMainMenu}
+            onAliasChange={setLeaderboardAlias}
+            onShareBoard={shareRunboard}
+            onCopyBoardLink={copyRunboardShareUrl}
+            onCopyBoardCode={copyRunboardShareCode}
+            onCopyBoardCsv={copyRunboardCsv}
             onOpenStory={openStoryMap}
-          onOpenSettings={() => openSettings()}
-          onToggleMute={toggleMute}
-          onToggleFullscreen={toggleFullscreen}
-          onCenterSelected={() => {
-              if (selectedLevelRef.current !== null) {
-                  handleSelectLevel(selectedLevelRef.current, { focus: true });
-              }
-          }}
-          onZoomIn={() => adjustMenuZoom(0.045)}
-          onZoomOut={() => adjustMenuZoom(-0.045)}
-          onResetView={resetMenuView}
-        />
-      </Suspense>
+            onFocusRoute={(levelId) => {
+              handleSelectLevel(levelId, { focus: true });
+              setSelectedLevelId(levelId);
+              selectedLevelRef.current = levelId;
+              setGameState(GameState.MENU);
+            }}
+            onRefreshCommunityBoard={() => {
+              void refreshCommunityBoardFromRemoteSource(true);
+            }}
+            onAcceptChallenge={incomingRouteChallenge ? acceptSharedRouteChallenge : undefined}
+            onShareRouteChallenge={(levelId) => {
+              clearRecommendationTrace();
+              void shareRouteChallenge(levelId);
+            }}
+            onCopyRouteChallenge={copyRouteChallengeText}
+            onImportBoardClipboard={importRunboardFromClipboard}
+            onImportBoardText={importRunboardFromText}
+            onClearCommunityBoard={clearCommunityRunboard}
+          />
+        </Suspense>
       )}
 
       {/* SHOP UI */}
@@ -6216,12 +9739,21 @@ export default function App() {
             shopItems={SHOP_ITEMS}
             currentBuild={currentBuildSummary}
             purchaseReceipt={purchaseReceipt}
-            onClose={() => setGameState(GameState.MENU)}
-            onReturnToMenu={returnToMainMenu}
+            onClose={() => {
+              clearRecommendationTrace();
+              setRecommendedShopItemId(null);
+              setGameState(GameState.MENU);
+            }}
+            onReturnToMenu={() => {
+              clearRecommendationTrace();
+              setRecommendedShopItemId(null);
+              returnToMainMenu();
+            }}
             onChangeTab={setActiveTab}
             onBuyItem={handleBuyItem}
             onEquipRopeType={handleEquipRopeType}
             onEquipSkin={handleEquipSkin}
+            initialSelectedItemId={recommendedShopItemId}
           />
         </Suspense>
       )}
@@ -6240,13 +9772,43 @@ export default function App() {
             hasNextUnlockedLevel={hasNextUnlockedLevel}
             selectedLevel={previewLevel}
             saveData={saveData}
+            communityRunHistory={communityBoardEntries}
             worldTimeMs={worldTimeRef.current * 1000}
             playerLives={playerLives}
             causeOfDeath={currentPlayer.causeOfDeath}
+            runDebrief={runDebriefRef.current}
             computeLevelStars={computeLevelStars}
-            onRetry={() => startGame(selectedLevelRef.current)}
-            onNextLevel={() => startGame(selectedLevelRef.current + 1)}
-            onReturnToMenu={() => { setGameState(GameState.MENU); handleSelectLevel(selectedLevelRef.current, { focus: true }); }}
+            recommendationDiagnostics={recommendationDiagnostics}
+            onRecommendationPresented={(itemId, levelId, levelName) => {
+              markRecommendationOffer(itemId, levelId, levelName);
+            }}
+            runCampaignOutcome={runCampaignChallengeResult}
+            runFeaturedCupOutcome={runFeaturedRouteCupResult}
+            onRetry={() => {
+              clearRecommendationTrace();
+              startGame(selectedLevelRef.current);
+            }}
+            onNextLevel={() => {
+              clearRecommendationTrace();
+              startGame(selectedLevelRef.current + 1);
+            }}
+            onOpenLeaderboard={() => {
+              clearRecommendationTrace();
+              openLeaderboardScreen();
+            }}
+            onShareRouteChallenge={() => {
+              clearRecommendationTrace();
+              void shareRouteChallenge(previewLevel.id);
+            }}
+            onOpenShopForUpgrade={(itemId) => openShopScreen(itemId)}
+            onReturnToMenu={() => {
+              clearRecommendationTrace();
+              setRunAchievementUnlocks([]);
+              setGameState(GameState.MENU);
+              handleSelectLevel(selectedLevelRef.current, { focus: true });
+            }}
+            newAchievements={runAchievementUnlocks}
+            recommendationTrend={recommendationTrend}
           />
         </Suspense>
       )}
