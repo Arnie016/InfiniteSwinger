@@ -580,6 +580,7 @@ export function ProgressSidebar({
       ? `Stale • ${formatSyncAge(leaderboardRemoteSyncAt)}`
       : `Live • ${formatSyncAge(leaderboardRemoteSyncAt)}`
     : 'Set source';
+  const [isRouteJumpOpen, setIsRouteJumpOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!isSourcePinned || !leaderboardRemoteSyncAt) {
@@ -731,6 +732,15 @@ export function ProgressSidebar({
             : 'Expand the atlas to a cleaner full-screen stage.',
     }));
   const isDockedCollapsed = variant === 'docked' && isCollapsed;
+  React.useEffect(() => {
+    if (!isDockedCollapsed) {
+      setIsRouteJumpOpen(false);
+    }
+  }, [isDockedCollapsed]);
+
+  React.useEffect(() => {
+    setIsRouteJumpOpen(false);
+  }, [selectedLevelId]);
   const scrollToSidebarSection = (section: string) => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -772,59 +782,136 @@ export function ProgressSidebar({
   if (isDockedCollapsed) {
     return (
       <div data-ui-control className="pointer-events-none absolute inset-y-0 left-3 z-20 hidden py-3 xl:flex">
-        <div className="pointer-events-auto flex h-full w-[74px] flex-col items-center justify-between rounded-3xl border border-white/10 bg-slate-950/90 py-3 text-white backdrop-blur-2xl atlas-surface atlas-elevated">
-          <div className="flex flex-col items-center gap-2">
-            <div className={`rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-[0.24em] ${isAtlasFocusMode ? 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-white/70'}`}>
-              {isAtlasFocusMode ? 'Brief' : 'Atlas'}
+        <div className="pointer-events-auto flex h-full w-[78px] flex-col items-center rounded-3xl border border-white/10 bg-slate-950/90 px-2 py-3 text-white backdrop-blur-2xl atlas-surface atlas-elevated">
+          <div className="flex w-full flex-col items-center gap-2">
+            <div className="w-full rounded-[1.45rem] border border-white/10 bg-white/[0.03] p-2 text-center">
+              <SidebarRailButton
+                label="Open Atlas Rail"
+                detail="Expand the left rail for routes, rivals, awards, and camp controls."
+                onClick={() => onToggleCollapsed?.()}
+                className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-white/[0.08]"
+                ariaLabel="Show campaign sidebar"
+              >
+                <ChevronRight size={16} />
+              </SidebarRailButton>
             </div>
-            <SidebarRailButton
-              label="Open Atlas Rail"
-              detail="Expand the left rail for routes, rivals, awards, and camp controls."
-              onClick={() => onToggleCollapsed?.()}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
-              ariaLabel="Show campaign sidebar"
-            >
-              <ChevronRight size={16} />
-            </SidebarRailButton>
+
+            <div className="relative w-full">
+              <SidebarRailButton
+                label="Route Jump"
+                detail="Jump the atlas straight to any route without expanding the full rail."
+                onClick={() => setIsRouteJumpOpen((current) => !current)}
+                className={`inline-flex h-[3.7rem] w-full flex-col items-center justify-center rounded-[1.35rem] border transition-[transform,background-color,border-color] hover:-translate-y-0.5 ${
+                  isAtlasFocusMode
+                    ? 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/16'
+                    : 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/16'
+                }`}
+                ariaLabel="Open route jump menu"
+              >
+                <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/55">Route</span>
+                <span className="mt-1 text-lg font-black leading-none text-white">L{selectedRoute?.id ?? highestUnlockedLevel}</span>
+              </SidebarRailButton>
+              {isRouteJumpOpen ? (
+                <div className="absolute left-full top-0 z-30 ml-3 w-[220px] rounded-[1.4rem] border border-white/10 bg-slate-950/96 p-2.5 shadow-[0_24px_70px_rgba(2,6,23,0.42)] backdrop-blur-2xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="atlas-map-label text-[9px] text-white/55">Route jump</div>
+                      <div className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100">Focus any lane</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsRouteJumpOpen(false)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition-colors hover:bg-white/[0.08]"
+                      aria-label="Close route jump menu"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="atlas-scroll mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto pr-1">
+                    {levels.map((level) => {
+                      const isSelected = level.id === selectedLevelId;
+                      const isUnlocked = level.id <= highestUnlockedLevel;
+
+                      return (
+                        <button
+                          key={`collapsed-route-jump-${level.id}`}
+                          type="button"
+                          onClick={() => {
+                            onSelectLevel(level.id);
+                            setIsRouteJumpOpen(false);
+                          }}
+                          className={`w-full rounded-xl border px-2.5 py-2 text-left transition-[transform,background-color,border-color] hover:-translate-y-0.5 ${
+                            isSelected
+                              ? 'border-emerald-300/35 bg-emerald-500/16'
+                              : isUnlocked
+                                ? 'border-white/10 bg-white/[0.03] hover:border-cyan-300/28 hover:bg-white/[0.06]'
+                                : 'border-rose-200/12 bg-rose-500/[0.03] hover:bg-rose-500/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="inline-flex max-w-full items-center gap-1.5">
+                                <span className="font-semibold text-white">L{level.id}</span>
+                                <span className="truncate text-white/82">{level.name}</span>
+                              </div>
+                              <div className="mt-1 text-[10px] text-white/50">
+                                {isUnlocked ? `${level.biome} • danger ${level.difficulty + 1}/10` : `Preview locked branch after L${level.id - 1}`}
+                              </div>
+                            </div>
+                            <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${
+                              isSelected
+                                ? 'border-emerald-200/20 bg-emerald-500/12 text-emerald-100'
+                                : isUnlocked
+                                  ? 'border-cyan-200/18 bg-cyan-500/10 text-cyan-100'
+                                  : 'border-white/10 bg-white/[0.04] text-white/55'
+                            }`}>
+                              {isSelected ? 'Focus' : isUnlocked ? 'View' : 'Locked'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className={`w-full rounded-[1.35rem] border px-2 py-2 text-center ${isAtlasFocusMode ? 'border-cyan-200/20 bg-cyan-500/10' : 'border-white/10 bg-white/[0.04]'}`}>
+              <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/45">Camp</div>
+              <div className="mt-1 text-lg font-black leading-none text-white">L{selectedRoute?.id ?? highestUnlockedLevel}</div>
+              <div className="mt-1 text-[8px] uppercase tracking-[0.18em] text-white/55">
+                {selectedRouteStatusLabel}
+              </div>
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-950/70">
+                <div
+                  className={`h-full rounded-full ${isAtlasFocusMode ? 'bg-cyan-300' : 'bg-emerald-300'}`}
+                  style={{ width: `${Math.max(0, Math.min(100, Math.round((highestUnlockedLevel / Math.max(1, levels.length)) * 100)))}%` }}
+                />
+              </div>
+              <div className="mt-1.5 text-[8px] uppercase tracking-[0.16em] text-white/50">
+                {highestUnlockedLevel}/{levels.length} routes
+              </div>
+            </div>
           </div>
 
-          <div className={`w-[52px] rounded-2xl border px-2 py-2 text-center ${isAtlasFocusMode ? 'border-cyan-200/20 bg-cyan-500/10' : 'border-white/10 bg-white/[0.04]'}`}>
-            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/45">
-              {isAtlasFocusMode ? 'Focus' : 'Frontier'}
-            </div>
-            <div className="mt-1 text-lg font-black leading-none text-white">
-              L{selectedRoute?.id ?? highestUnlockedLevel}
-            </div>
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-950/70">
-              <div
-                className={`h-full rounded-full ${isAtlasFocusMode ? 'bg-cyan-300' : 'bg-emerald-300'}`}
-                style={{ width: `${Math.max(0, Math.min(100, Math.round((highestUnlockedLevel / Math.max(1, levels.length)) * 100)))}%` }}
-              />
-            </div>
-            <div className="mt-1 space-y-0.5 text-[8px] uppercase tracking-[0.16em] text-white/50">
-              <div>{unlockedAchievementCount}/{achievements.length} awards</div>
-              <div>{currentStreak} streak</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 px-2">
+          <div className="mt-3 flex w-full flex-col items-center gap-2">
             <SidebarRailButton
-              label={`Focus L${selectedRoute?.id ?? highestUnlockedLevel}`}
+              label={`Center L${selectedRoute?.id ?? highestUnlockedLevel}`}
               detail={selectedRoute ? `${selectedRoute.name}. Jump the map back to your selected route.` : 'Center on your current frontier route.'}
               onClick={() => {
                 if (!selectedRoute) return;
                 onSelectLevel(selectedRoute.id);
               }}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/20 bg-emerald-500/12 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100 transition-colors hover:bg-emerald-500/18"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/20 bg-emerald-500/12 text-emerald-100 transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-emerald-500/18"
             >
-              L{selectedRoute?.id ?? highestUnlockedLevel}
+              <LocateFixed size={15} />
             </SidebarRailButton>
             {onOpenShop ? (
               <SidebarRailButton
                 label="Shop"
                 detail="Open the bazaar and retune rope, launch, survival, and cosmetics."
                 onClick={onOpenShop}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-white/[0.08]"
                 ariaLabel="Open shop"
               >
                 <ShoppingBag size={15} />
@@ -834,7 +921,7 @@ export function ProgressSidebar({
               label="Boards"
               detail="View leaderboard pressure, rival routes, and imported crew standings."
               onClick={onOpenLeaderboard}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-white/[0.08]"
               ariaLabel="Open boards"
             >
               <Trophy size={15} />
@@ -844,7 +931,7 @@ export function ProgressSidebar({
                 label="Story Map"
                 detail="Open the campaign story overlay and inspect route beats in sequence."
                 onClick={onOpenStory}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-white/[0.08]"
                 ariaLabel="Open story"
               >
                 <BookOpen size={15} />
@@ -855,22 +942,13 @@ export function ProgressSidebar({
                 label={isMuted ? 'Unmute' : 'Sound'}
                 detail={isMuted ? 'Turn interface and route audio back on.' : 'Mute interface and route audio.'}
                 onClick={onToggleMute}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:bg-white/[0.08]"
                 ariaLabel={isMuted ? 'Unmute' : 'Mute'}
               >
                 {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
               </SidebarRailButton>
             ) : null}
           </div>
-
-          <SidebarRailButton
-            label="Expand Rail"
-            detail="Show the full campaign rail with route list, rival highlights, and awards."
-            onClick={() => onToggleCollapsed?.()}
-            className="mb-1 inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70 transition-colors hover:bg-white/[0.08]"
-          >
-            Show
-          </SidebarRailButton>
         </div>
       </div>
     );

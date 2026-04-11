@@ -5,7 +5,6 @@ import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, M
 import { audioManager } from './services/audioManager';
 import { clearPersistedSaveData, createSaveBackup, loadSaveData, parseSaveBackup, persistSaveData } from './services/persistence';
 import { LandingScreen } from './components/ui/LandingScreen';
-import { StoryCastPortrait } from './components/ui/StoryCastPortrait';
 import { STORY_SCENE_PALETTE } from './content/storyCast';
 import { BIOMES, DEFAULT_SAVE, INTRO_STORY_SEQUENCE, LEVELS, MAP_REGIONS, ROUTE_SCRIPTS, SHOP_ITEMS, THEME_PROFILES } from './gameData';
 import { DEFAULT_DEBUG_FLAGS, DEFAULT_ENGINE_CONFIG } from './engine/config';
@@ -75,6 +74,15 @@ function LaunchIntroOverlay({
     const progress = Math.max(0, Math.min(1, 1 - remainingMs / Math.max(1, intro.durationMs)));
     const heading = getCompassHeading(compassAngleDeg);
     const routeLabel = level ? `L${level.id} ${level.name}` : intro.banner.title;
+    const launchCue = remainingSeconds >= 3 ? 'Scout the line' : remainingSeconds === 2 ? 'Brace the swing' : 'Launch clean';
+    const countdownSteps = ['Scout', 'Brace', 'Launch'];
+    const countdownActiveStep = Math.min(countdownSteps.length - 1, Math.floor(progress * countdownSteps.length));
+    const countdownStepLabel = countdownSteps[countdownActiveStep] ?? countdownSteps[0];
+    const pulseScale = 0.98 + Math.sin(progress * Math.PI * 6) * 0.02;
+    const routeSummary = level?.description ?? intro.banner.subtitle;
+    const routeStats = level
+        ? [level.biome, `${level.targetDistance}m`, `${level.checkpointCount} checkpoints`]
+        : ['Route', 'Live', 'Arc ready'];
 
     useEffect(() => {
         launchButtonRef.current?.focus({ preventScroll: true });
@@ -110,70 +118,187 @@ function LaunchIntroOverlay({
             aria-label={`Launch preview for ${routeLabel}`}
         >
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.16),transparent_26%),radial-gradient(circle_at_80%_18%,rgba(52,211,153,0.13),transparent_24%),radial-gradient(circle_at_50%_82%,rgba(251,191,36,0.12),transparent_24%),linear-gradient(180deg,rgba(2,6,23,0.08),rgba(2,6,23,0.42))]" />
-            <div className="pointer-events-auto relative grid h-full w-full grid-rows-[minmax(0,0.98fr)_minmax(0,1.02fr)] lg:grid-cols-[1.08fr_0.92fr] lg:grid-rows-none">
-                <div className="relative min-h-[48svh] overflow-hidden border-b border-white/10 lg:border-b-0 lg:border-r">
-                        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 960 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true" role="presentation">
-                            <defs>
-                                <linearGradient id={`launch-sky-${intro.levelId}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={palette.skyFrom} />
-                                    <stop offset="100%" stopColor={palette.skyTo} />
-                                </linearGradient>
-                                <radialGradient id={`launch-glow-${intro.levelId}`} cx="50%" cy="26%" r="54%">
-                                    <stop offset="0%" stopColor={palette.glow} stopOpacity="0.96" />
-                                    <stop offset="100%" stopColor={palette.glow} stopOpacity="0" />
-                                </radialGradient>
-                                <radialGradient id={`launch-vignette-${intro.levelId}`} cx="50%" cy="48%" r="70%">
-                                    <stop offset="55%" stopColor="rgba(2,6,23,0)" />
-                                    <stop offset="100%" stopColor="rgba(2,6,23,0.56)" />
-                                </radialGradient>
-                            </defs>
-                            <rect x="0" y="0" width="960" height="720" fill={`url(#launch-sky-${intro.levelId})`} />
-                            <ellipse cx="488" cy="148" rx="238" ry="114" fill={`url(#launch-glow-${intro.levelId})`}>
-                                <animate attributeName="ry" values="110;124;110" dur="4.4s" repeatCount="indefinite" />
+            <div className="pointer-events-none absolute right-6 top-6 z-20 hidden max-w-[26rem] items-end text-right lg:flex">
+                <div className="w-full">
+                    <div className="flex items-center justify-end gap-2">
+                        <div className="rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
+                            Route live
+                        </div>
+                        <div className="rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
+                            {intro.banner.kicker}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onSkip}
+                            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/[0.08]"
+                        >
+                            <X size={12} />
+                            Skip
+                        </button>
+                    </div>
+                    <div className="mt-4 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.82),rgba(15,23,42,0.56))] px-6 py-5 shadow-[0_30px_90px_rgba(2,6,23,0.42)] backdrop-blur-xl">
+                        <div className="atlas-map-label text-[10px] uppercase tracking-[0.34em] text-emerald-200/70">Route ready</div>
+                        <div className="mt-3 atlas-title text-[3.15rem] leading-[0.92] text-white">{routeLabel}</div>
+                        <div className="mt-3 text-[1rem] leading-relaxed text-slate-200/88">{routeSummary}</div>
+                        <div className="mt-4 flex flex-wrap justify-end gap-2">
+                            {routeStats.map((stat) => (
+                                <span
+                                    key={`hero-${intro.levelId}-${stat}`}
+                                    className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100"
+                                >
+                                    {stat}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="pointer-events-auto relative grid h-full w-full grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] lg:grid-rows-none">
+                <div className="relative min-h-[54svh] overflow-hidden border-b border-white/10 lg:border-b-0 lg:border-r">
+                    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 960 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true" role="presentation">
+                        <defs>
+                            <linearGradient id={`launch-sky-${intro.levelId}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={palette.skyFrom} />
+                                <stop offset="100%" stopColor={palette.skyTo} />
+                            </linearGradient>
+                            <radialGradient id={`launch-glow-${intro.levelId}`} cx="50%" cy="26%" r="54%">
+                                <stop offset="0%" stopColor={palette.glow} stopOpacity="0.96" />
+                                <stop offset="100%" stopColor={palette.glow} stopOpacity="0" />
+                            </radialGradient>
+                            <linearGradient id={`launch-scan-${intro.levelId}`} x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                                <stop offset="50%" stopColor="rgba(167,243,208,0.18)" />
+                                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                            </linearGradient>
+                            <radialGradient id={`launch-vignette-${intro.levelId}`} cx="50%" cy="48%" r="70%">
+                                <stop offset="55%" stopColor="rgba(2,6,23,0)" />
+                                <stop offset="100%" stopColor="rgba(2,6,23,0.56)" />
+                            </radialGradient>
+                            <radialGradient id={`launch-mist-${intro.levelId}`} cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="rgba(226,232,240,0.2)" />
+                                <stop offset="100%" stopColor="rgba(226,232,240,0)" />
+                            </radialGradient>
+                            <filter id={`launch-far-blur-${intro.levelId}`}>
+                                <feGaussianBlur stdDeviation="14" />
+                            </filter>
+                            <filter id={`launch-near-blur-${intro.levelId}`}>
+                                <feGaussianBlur stdDeviation="24" />
+                            </filter>
+                        </defs>
+                        <rect x="0" y="0" width="960" height="720" fill={`url(#launch-sky-${intro.levelId})`} />
+                        <ellipse cx="488" cy="148" rx="238" ry="114" fill={`url(#launch-glow-${intro.levelId})`}>
+                            <animate attributeName="ry" values="110;124;110" dur="3.2s" repeatCount="indefinite" />
+                        </ellipse>
+                        <g opacity="0.28" filter={`url(#launch-far-blur-${intro.levelId})`}>
+                            <ellipse cx="252" cy="262" rx="164" ry="52" fill={`url(#launch-mist-${intro.levelId})`}>
+                                <animate attributeName="cx" values="252;286;252" dur="6.2s" repeatCount="indefinite" />
                             </ellipse>
-                            <path d="M0 500C114 448 208 428 304 460C392 490 472 496 558 462C650 426 748 430 960 506V720H0Z" fill={palette.ridge} opacity="0.94" />
-                            <path d="M0 566C126 528 238 514 342 538C434 560 512 564 602 540C704 512 804 518 960 574V720H0Z" fill="#08111d" opacity="0.84" />
-                            <path d="M176 156L188 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
-                            <path d="M188 188C226 184 258 170 284 144" stroke="#2a4a3f" strokeWidth="12" strokeLinecap="round" />
-                            <path d="M188 222C228 228 262 220 292 196" stroke="#2a4a3f" strokeWidth="11" strokeLinecap="round" />
-                            <path d="M760 150L744 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
-                            <path d="M744 188C706 182 672 168 640 140" stroke="#263646" strokeWidth="12" strokeLinecap="round" />
-                            <path d="M230 140C314 164 396 214 476 292" fill="none" stroke={palette.accent} strokeWidth="5.5" strokeLinecap="round" strokeDasharray="10 10">
-                                <animate attributeName="stroke-dashoffset" values="0;-84" dur="3.1s" repeatCount="indefinite" />
-                            </path>
-                            <g transform="translate(0 0)">
-                                <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="3.4s" repeatCount="indefinite" />
-                                <path d="M484 288C502 264 520 256 540 260C558 264 574 278 584 300C552 318 520 326 490 324C486 314 484 300 484 288Z" fill="#0b1020" />
+                            <ellipse cx="708" cy="310" rx="184" ry="60" fill={`url(#launch-mist-${intro.levelId})`}>
+                                <animate attributeName="cx" values="708;680;708" dur="7.4s" repeatCount="indefinite" />
+                            </ellipse>
+                        </g>
+                        <path d="M0 500C114 448 208 428 304 460C392 490 472 496 558 462C650 426 748 430 960 506V720H0Z" fill={palette.ridge} opacity="0.94">
+                            <animate attributeName="d" dur="5.4s" repeatCount="indefinite" values="M0 500C114 448 208 428 304 460C392 490 472 496 558 462C650 426 748 430 960 506V720H0Z;M0 510C126 456 220 420 314 450C404 478 484 490 562 470C646 448 744 438 960 500V720H0Z;M0 500C114 448 208 428 304 460C392 490 472 496 558 462C650 426 748 430 960 506V720H0Z" />
+                        </path>
+                        <path d="M0 566C126 528 238 514 342 538C434 560 512 564 602 540C704 512 804 518 960 574V720H0Z" fill="#08111d" opacity="0.84" />
+                        <rect x="-220" y="0" width="180" height="720" fill={`url(#launch-scan-${intro.levelId})`}>
+                            <animate attributeName="x" values="-220;1040" dur="2.7s" repeatCount="indefinite" />
+                        </rect>
+                        <path d="M176 156L188 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
+                        <path d="M188 188C226 184 258 170 284 144" stroke="#2a4a3f" strokeWidth="12" strokeLinecap="round">
+                            <animate attributeName="d" dur="3.4s" repeatCount="indefinite" values="M188 188C226 184 258 170 284 144;M188 188C232 186 260 166 292 140;M188 188C226 184 258 170 284 144" />
+                        </path>
+                        <path d="M188 222C228 228 262 220 292 196" stroke="#2a4a3f" strokeWidth="11" strokeLinecap="round">
+                            <animate attributeName="d" dur="3.1s" repeatCount="indefinite" values="M188 222C228 228 262 220 292 196;M188 222C232 230 268 216 300 190;M188 222C228 228 262 220 292 196" />
+                        </path>
+                        <path d="M760 150L744 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
+                        <path d="M744 188C706 182 672 168 640 140" stroke="#263646" strokeWidth="12" strokeLinecap="round">
+                            <animate attributeName="d" dur="3.6s" repeatCount="indefinite" values="M744 188C706 182 672 168 640 140;M744 188C704 180 666 162 628 136;M744 188C706 182 672 168 640 140" />
+                        </path>
+                        <g opacity="0.38">
+                            <path d="M654 212C674 208 694 214 708 230" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" />
+                            <circle cx="714" cy="226" r="8" fill="#0b1020" />
+                            <path d="M714 234L706 258" stroke="#0b1020" strokeWidth="8" strokeLinecap="round" />
+                            <path d="M706 246L688 258" stroke="#0b1020" strokeWidth="7" strokeLinecap="round" />
+                            <path d="M714 246L730 258" stroke="#0b1020" strokeWidth="7" strokeLinecap="round" />
+                            <circle cx="718" cy="223" r="2.5" fill={palette.accent}>
+                                <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />
+                            </circle>
+                        </g>
+                        <path d="M230 140C314 164 396 214 476 292" fill="none" stroke={palette.accent} strokeWidth="5.5" strokeLinecap="round" strokeDasharray="10 10">
+                            <animate attributeName="stroke-dashoffset" values="0;-84" dur="2.2s" repeatCount="indefinite" />
+                        </path>
+                        <circle r="8" fill={palette.accent} filter="drop-shadow(0 0 14px rgba(167,243,208,0.6))">
+                            <animateMotion dur="2.2s" repeatCount="indefinite" path="M230 140C314 164 396 214 476 292" />
+                        </circle>
+                        <g opacity="0.18" filter={`url(#launch-far-blur-${intro.levelId})`}>
+                            <circle cx="348" cy="206" r="18" fill="rgba(255,255,255,0.3)">
+                                <animate attributeName="cx" values="348;372;348" dur="6.8s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="622" cy="172" r="12" fill="rgba(255,255,255,0.26)">
+                                <animate attributeName="cy" values="172;156;172" dur="5.4s" repeatCount="indefinite" />
+                            </circle>
+                        </g>
+                        <g>
+                            <animateTransform attributeName="transform" type="translate" values="0 0;0 -12;0 0" dur="2.6s" repeatCount="indefinite" />
+                            <g>
+                                <animateTransform attributeName="transform" type="rotate" values="-6 522 282;5 522 274;-6 522 282" dur="2.6s" repeatCount="indefinite" />
+                                <path d="M490 278C516 260 544 256 566 264C584 272 594 286 598 304C568 322 536 330 498 326C492 314 488 296 490 278Z" fill="#0b1020" />
+                                <path d="M550 272C566 272 578 278 590 292" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" strokeLinecap="round" />
                                 <circle cx="522" cy="240" r="24" fill="#0b1020" />
-                                <circle cx="532" cy="233" r="6" fill={palette.accent} />
+                                <circle cx="532" cy="233" r="6" fill={palette.accent}>
+                                    <animate attributeName="r" values="6;6;6;1.2;6;6" dur="3.4s" repeatCount="indefinite" />
+                                </circle>
                                 <path d="M510 264L500 324" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
                                 <path d="M534 266L568 312" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
                                 <path d="M496 286L448 300" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
                                 <path d="M574 286L610 250" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
                                 <path d="M610 250L646 204" stroke={palette.accent} strokeWidth="6" strokeLinecap="round" />
+                                <path d="M544 252C566 244 586 250 610 272" fill="none" stroke={palette.accent} strokeWidth="4.5" strokeLinecap="round" opacity="0.9">
+                                    <animate attributeName="d" values="M544 252C566 244 586 250 610 272;M544 252C570 242 594 254 622 286;M544 252C566 244 586 250 610 272" dur="1.8s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M500 302L532 314" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
                             </g>
-                            <rect x="0" y="0" width="960" height="720" fill={`url(#launch-vignette-${intro.levelId})`} />
-                        </svg>
+                        </g>
+                        <g opacity="0.26" filter={`url(#launch-near-blur-${intro.levelId})`}>
+                            <path d="M0 118C66 104 112 126 162 180C118 208 78 234 0 246Z" fill="rgba(36,64,55,0.95)">
+                                <animateTransform attributeName="transform" type="translate" values="0 0;14 -4;0 0" dur="5.4s" repeatCount="indefinite" />
+                            </path>
+                            <path d="M960 94C904 106 856 142 804 206C850 230 900 250 960 258Z" fill="rgba(39,54,70,0.92)">
+                                <animateTransform attributeName="transform" type="translate" values="0 0;-12 6;0 0" dur="6.1s" repeatCount="indefinite" />
+                            </path>
+                            <ellipse cx="504" cy="640" rx="254" ry="34" fill="rgba(226,232,240,0.16)">
+                                <animate attributeName="rx" values="254;280;254" dur="6.6s" repeatCount="indefinite" />
+                            </ellipse>
+                        </g>
+                        <rect x="0" y="0" width="960" height="720" fill={`url(#launch-vignette-${intro.levelId})`} />
+                    </svg>
 
-                        <div className="absolute left-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
-                            Route preview
+                    <div className="absolute left-5 top-5 flex flex-wrap gap-2 lg:hidden">
+                        <div className="rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
+                            Route live
                         </div>
-                        <div className="absolute right-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
+                        <div className="rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
                             {intro.banner.kicker}
-                        </div>
-                        <div className="absolute bottom-5 left-5 max-w-[80%] rounded-[1.1rem] border border-white/15 bg-slate-950/80 px-4 py-3 shadow-2xl shadow-black/40">
-                            <div className="text-[10px] font-black uppercase tracking-[0.28em] text-white/45">{intro.banner.speaker}</div>
-                            <div className="mt-1 text-sm font-semibold leading-relaxed text-white">{intro.banner.caption}</div>
                         </div>
                     </div>
 
-                <div className="flex min-h-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <div className="atlas-map-label text-[10px] uppercase tracking-[0.34em] text-emerald-200/70">Route briefing</div>
-                            </div>
+                    <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-end justify-between gap-3">
+                        <div className="max-w-[30rem] rounded-[1.15rem] border border-white/15 bg-slate-950/80 px-4 py-3 shadow-2xl shadow-black/40">
+                            <div className="text-[10px] font-black uppercase tracking-[0.28em] text-white/45">{intro.banner.speaker}</div>
+                            <div className="mt-1 text-sm font-semibold leading-relaxed text-white">{intro.banner.caption}</div>
+                        </div>
+                        <div className="rounded-full border border-white/15 bg-slate-950/72 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/72">
+                            {launchCue}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex min-h-0 flex-col justify-between px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7 lg:pt-28">
+                    <div>
+                        <div className="flex items-start justify-between gap-3 lg:hidden">
+                            <div className="atlas-map-label text-[10px] uppercase tracking-[0.34em] text-emerald-200/70">Route ready</div>
                             <button
-                                ref={launchButtonRef}
                                 type="button"
                                 onClick={onSkip}
                                 className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/[0.08]"
@@ -183,124 +308,119 @@ function LaunchIntroOverlay({
                             </button>
                         </div>
 
-                        <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.24)]">
-                            <div className="flex items-center gap-3">
-                                <div className="relative h-14 w-14 rounded-full border border-white/10 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.14),rgba(15,23,42,0.92))]">
-                                    <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/75">N</span>
-                                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">E</span>
-                                    <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">S</span>
-                                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">W</span>
-                                    <div
-                                        className="absolute left-1/2 top-1/2 h-[24px] w-[3px] -translate-x-1/2 -translate-y-[90%] rounded-full bg-gradient-to-b from-emerald-200 via-cyan-200 to-transparent shadow-[0_0_14px_rgba(125,211,252,0.45)] transition-transform duration-500"
-                                        style={{ transform: `translate(-50%, -90%) rotate(${compassAngleDeg}deg)` }}
-                                    />
-                                    <div className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-slate-950" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/55">Compass</div>
-                                    <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-emerald-100">
-                                        <Compass size={14} />
-                                        {heading}
-                                    </div>
-                                    <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">Route bearing</div>
-                                </div>
-                            </div>
+                        <div className="mt-5 lg:hidden">
+                            <div className="atlas-title text-[2.35rem] leading-[0.94] text-white">{routeLabel}</div>
+                            <div className="mt-3 max-w-lg text-[0.95rem] leading-relaxed text-slate-300">{routeSummary}</div>
                         </div>
 
-                        <div className="mt-5">
-                            <div className="atlas-map-label text-[11px] uppercase tracking-[0.34em] text-white/55">{intro.banner.kicker}</div>
-                            <div className="atlas-title mt-2 text-4xl text-white">{routeLabel}</div>
-                            <div className="mt-3 text-[1.02rem] leading-relaxed text-slate-300">{level?.description ?? intro.banner.subtitle}</div>
+                        <div className="mt-5 flex flex-wrap gap-2 lg:hidden">
+                            {routeStats.map((stat) => (
+                                <span
+                                    key={`${intro.levelId}-${stat}`}
+                                    className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100"
+                                >
+                                    {stat}
+                                </span>
+                            ))}
                         </div>
 
-                        {level ? (
-                            <div className="mt-5 flex flex-wrap gap-2">
-                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
-                                    {level.biome}
-                                </span>
-                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
-                                    {level.targetDistance}m route
-                                </span>
-                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
-                                    {level.checkpointCount} checkpoints
-                                </span>
-                            </div>
-                        ) : null}
-
-                        <div className="mt-5 rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.24)]">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex min-w-0 items-start gap-3">
-                                    <div className="flex shrink-0 items-start -space-x-3">
-                                        {intro.banner.characterId ? (
-                                            <StoryCastPortrait characterId={intro.banner.characterId} scene={intro.banner.scene} size={56} />
-                                        ) : null}
-                                        {intro.banner.supportCharacterId ? (
-                                            <StoryCastPortrait
-                                                characterId={intro.banner.supportCharacterId}
-                                                scene={intro.banner.scene}
-                                                size={48}
-                                                priority="support"
-                                                className="mt-5"
-                                            />
-                                        ) : null}
+                        <div className="mt-5 grid gap-3 lg:mt-0">
+                            <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 shadow-[0_24px_60px_rgba(2,6,23,0.2)]">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative h-12 w-12 rounded-full border border-white/10 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.14),rgba(15,23,42,0.92))]">
+                                        <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[8px] font-bold uppercase tracking-[0.2em] text-white/75">N</span>
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold uppercase tracking-[0.2em] text-white/40">E</span>
+                                        <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-bold uppercase tracking-[0.2em] text-white/40">S</span>
+                                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold uppercase tracking-[0.2em] text-white/40">W</span>
+                                        <div
+                                            className="absolute left-1/2 top-1/2 h-[22px] w-[3px] -translate-x-1/2 -translate-y-[90%] rounded-full bg-gradient-to-b from-emerald-200 via-cyan-200 to-transparent shadow-[0_0_14px_rgba(125,211,252,0.45)] transition-transform duration-300"
+                                            style={{ transform: `translate(-50%, -90%) rotate(${compassAngleDeg}deg)` }}
+                                        />
+                                        <div className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-slate-950" />
                                     </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/45">Bearing</div>
+                                        <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-emerald-100">
+                                            <Compass size={14} />
+                                            {heading}
+                                        </div>
+                                        <div className="mt-1 text-[11px] leading-relaxed text-slate-300">Keep your approach clean and the line will hold.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 shadow-[0_24px_60px_rgba(2,6,23,0.2)]">
+                                <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/45">Crew cue</div>
+                                <div className="mt-1 flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                        <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/45">Crew signal</div>
-                                        <div className="mt-1 text-sm font-black text-white">{intro.banner.speaker}</div>
+                                        <div className="text-sm font-black text-white">{intro.banner.speaker}</div>
                                         <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{intro.banner.caption}</div>
                                     </div>
-                                </div>
-                                <div className="rounded-full border border-white/10 bg-slate-950/55 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                                    {intro.banner.rivalStatus}
-                                </div>
-                            </div>
-
-                            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-                                <div className="rounded-2xl border border-white/10 bg-slate-950/55 px-3 py-3">
-                                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-100/70">Mission</div>
-                                    <div className="mt-1 text-sm font-black text-white">{intro.banner.missionTitle}</div>
-                                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{intro.banner.missionDetail}</div>
-                                </div>
-                                <div className="rounded-2xl border border-white/10 bg-slate-950/55 px-3 py-3">
-                                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-cyan-100/70">Rival detail</div>
-                                    <div className="mt-1 text-[11px] leading-relaxed text-white">{intro.banner.rivalDetail}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-auto rounded-[1.4rem] border border-white/10 bg-slate-950/55 px-4 py-4">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-100/70">
-                                        <Clock size={12} />
-                                        Launch countdown
+                                    <div className="shrink-0 rounded-full border border-white/10 bg-slate-950/60 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/65">
+                                        {intro.banner.rivalStatus}
                                     </div>
-                                    <div className="mt-1 text-2xl font-black text-white">{remainingSeconds}s</div>
                                 </div>
-                                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55">
-                                    Skip available
-                                </div>
-                            </div>
-
-                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-200 transition-[width] duration-100"
-                                    style={{ width: `${Math.round(progress * 100)}%` }}
-                                />
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[10px] uppercase tracking-[0.18em] text-white/45">
-                                <span>Esc / Enter / Space skip the preview</span>
-                                <button
-                                    type="button"
-                                    onClick={onSkip}
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-500/12 px-3 py-1.5 font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/18"
-                                >
-                                    <Play size={12} />
-                                    Launch now
-                                </button>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="mt-5 rounded-[1.45rem] border border-white/10 bg-slate-950/58 px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.24)]">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-100/70">
+                                    <Clock size={12} />
+                                    Launch in
+                                </div>
+                                <div className="mt-2 flex items-end gap-3">
+                                    <div
+                                        className="text-4xl font-black text-white transition-transform duration-150"
+                                        style={{ transform: `scale(${pulseScale})` }}
+                                    >
+                                        {remainingSeconds}s
+                                    </div>
+                                    <div className="pb-1 text-[11px] uppercase tracking-[0.18em] text-white/55">{countdownStepLabel}</div>
+                                </div>
+                            </div>
+                            <button
+                                ref={launchButtonRef}
+                                type="button"
+                                onClick={onSkip}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100 transition-colors hover:bg-emerald-500/18"
+                            >
+                                <Play size={12} />
+                                Play now
+                            </button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-3 gap-2">
+                            {countdownSteps.map((label, index) => {
+                                const isActive = index <= countdownActiveStep;
+                                return (
+                                    <div
+                                        key={`${intro.levelId}-${label}`}
+                                        className={`rounded-xl border px-2.5 py-2 text-center transition-colors ${
+                                            isActive
+                                                ? 'border-emerald-200/24 bg-emerald-500/12 text-emerald-100'
+                                                : 'border-white/10 bg-white/[0.03] text-white/45'
+                                        }`}
+                                    >
+                                        <div className="text-[8px] font-black uppercase tracking-[0.22em]">{label}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-200 transition-[width] duration-100"
+                                style={{ width: `${Math.round(progress * 100)}%` }}
+                            />
+                        </div>
+
+                        <div className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/45">
+                            Esc / Enter / Space skips straight into play
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3120,7 +3240,15 @@ export default function App() {
         setSaveData(loadedSave);
         setSaveRecoveryNotice(recoveryNotice);
         setRuntimeSettings(resolveSwingLabConfig(loadedSave));
-        setSelectedLevelId(loadedSave.hasCompletedStoryIntro ? null : loadedSave.lastSelectedLevelId);
+        setSelectedLevelId(
+          Math.max(
+            1,
+            Math.min(
+              loadedSave.lastSelectedLevelId || loadedSave.maxLevelReached || 1,
+              LEVELS.length,
+            ),
+          ),
+        );
       })
       .catch((error) => {
         console.warn('Failed to load save data', error);
@@ -3428,7 +3556,7 @@ export default function App() {
       return Math.max(
           1,
           Math.min(
-              selectedLevelId ?? saveDataRef.current.lastSelectedLevelId ?? selectedLevelRef.current ?? 1,
+              selectedLevelId ?? selectedLevelRef.current ?? saveDataRef.current.lastSelectedLevelId ?? 1,
               LEVELS.length,
           ),
       );
@@ -3458,13 +3586,14 @@ export default function App() {
       const focusTarget = getMenuCameraTargetForLevel(levelId);
       const currentCamera = menuMapCameraRef.current;
       const isSameSelection = selectedLevelRef.current === levelId;
+      const isStateSelection = selectedLevelId === levelId;
       const selectedLevelEntry = LEVELS.find((level) => level.id === levelId) ?? null;
       const focusDistance = Math.hypot(currentCamera.x - focusTarget.x, currentCamera.y - focusTarget.y);
       const zoomDistance = Math.abs(currentCamera.zoom - focusTarget.zoom);
       const shouldRetargetCamera = focus && (!isSameSelection || focusDistance > 36 || zoomDistance > 0.035);
       const isLockedRoute = levelId > Math.min(saveDataRef.current.maxLevelReached, LEVELS.length);
 
-      if (!isSameSelection) {
+      if (!isStateSelection) {
           setSelectedLevelId(levelId);
       }
       selectedLevelRef.current = levelId;
@@ -3517,7 +3646,7 @@ export default function App() {
               muted: isMutedRef.current,
           });
       }
-  }, [commitSaveData]);
+  }, [commitSaveData, selectedLevelId]);
 
   const stepSelectedRoute = useCallback((direction: -1 | 1) => {
       const currentHighestUnlockedLevel = Math.max(1, Math.min(saveDataRef.current.maxLevelReached, LEVELS.length));
@@ -4170,7 +4299,15 @@ export default function App() {
           const normalized = withDerivedProgression(imported);
           setSaveData(normalized);
           setRuntimeSettings(resolveSwingLabConfig(normalized));
-          setSelectedLevelId(normalized.hasCompletedStoryIntro ? null : normalized.lastSelectedLevelId);
+          setSelectedLevelId(
+            Math.max(
+              1,
+              Math.min(
+                normalized.lastSelectedLevelId || normalized.maxLevelReached || 1,
+                LEVELS.length,
+              ),
+            ),
+          );
           setGameState(normalized.hasCompletedStoryIntro ? GameState.MENU : GameState.LANDING);
           setSaveRecoveryNotice('Backup imported successfully.');
       } catch (error) {
@@ -6218,7 +6355,7 @@ export default function App() {
     handleSelectLevel(levelId, { focus: true });
 
     const banner = buildRunIntroBanner(level, saveDataRef.current, communityBoardEntries);
-    const launchDelayMs = 5000;
+    const launchDelayMs = 3000;
     const nextLaunch: LaunchIntroState = {
       levelId,
       banner,
@@ -6786,7 +6923,14 @@ export default function App() {
      const now = performance.now();
      const storyBeat = gameStateRef.current === GameState.STORY_MAP ? INTRO_STORY_SEQUENCE.beats[storyBeatIndexRef.current] : null;
      const storyRegion = storyBeat ? MAP_REGION_LOOKUP.get(storyBeat.regionId) ?? null : null;
-     const selectedLevel = selectedLevelId !== null ? LEVELS[selectedLevelId - 1] ?? null : null;
+     const effectiveSelectedLevelId = Math.max(
+         1,
+         Math.min(
+             selectedLevelId ?? selectedLevelRef.current ?? saveDataRef.current.lastSelectedLevelId ?? saveDataRef.current.maxLevelReached ?? 1,
+             LEVELS.length,
+         ),
+     );
+     const selectedLevel = LEVELS[effectiveSelectedLevelId - 1] ?? null;
      const selectedRegion = selectedLevel ? getMapRegionForLevel(selectedLevel.id) : MAP_REGION_LOOKUP.get('floodline-rise') ?? null;
      const focusRegion = storyRegion ?? selectedRegion ?? MAP_REGION_LOOKUP.get('floodline-rise') ?? null;
      const presentation = getEffectiveDisplaySettings(saveData.settings);
@@ -9380,7 +9524,18 @@ export default function App() {
       };
   }, [currentBiome, gameState, isPaused, playerLives]);
 
-  const selectedLevel = selectedLevelId !== null ? LEVELS[selectedLevelId - 1] ?? null : null;
+  const effectiveSelectedLevelId = Math.max(
+    1,
+    Math.min(
+      selectedLevelId
+        ?? selectedLevelRef.current
+        ?? saveData.lastSelectedLevelId
+        ?? saveData.maxLevelReached
+        ?? 1,
+      LEVELS.length,
+    ),
+  );
+  const selectedLevel = LEVELS[effectiveSelectedLevelId - 1] ?? null;
   const selectedLevelResult = selectedLevel ? saveData.levelResults[String(selectedLevel.id)] ?? createEmptyLevelResult() : null;
   const highestUnlockedLevel = Math.min(saveData.maxLevelReached, LEVELS.length);
   const incomingLandingChallenge = incomingRouteChallenge
@@ -9418,16 +9573,16 @@ export default function App() {
   const menuAchievements = resolveMenuAchievements(saveData, communityBoardEntries);
   const runConsistency = computeRunWinStreaks(saveData.runHistory);
   const leaderboardSharePackage = buildRunboardSharePackage();
-  const hasNextUnlockedLevel = selectedLevelRef.current < highestUnlockedLevel;
+  const hasNextUnlockedLevel = effectiveSelectedLevelId < highestUnlockedLevel;
   const bestScore = Math.max(saveData.highScore, score);
   const currentPlayer = monkey.current;
-  const previewLevel = selectedLevel ?? LEVELS[selectedLevelRef.current - 1] ?? LEVELS[0];
+  const previewLevel = selectedLevel ?? LEVELS[Math.max(0, effectiveSelectedLevelId - 1)] ?? LEVELS[0];
   const activeRoutePressure = buildActiveRoutePressure(previewLevel, saveData.runHistory, communityBoardEntries, score);
   const activeFeaturedRoutePressure = buildActiveFeaturedCupPressure(previewLevel, featuredRouteCup, score);
   const activeRouteBeat = getScriptedRouteBeat(previewLevel, currentPlayer.position.x);
   const currentBuildSummary = getCurrentBuildSummary(saveData, selectedLevel);
   const atlasCompassAngleDeg = (() => {
-      const focusLevelId = selectedLevel?.id ?? selectedLevelRef.current ?? 1;
+      const focusLevelId = selectedLevel?.id ?? effectiveSelectedLevelId ?? 1;
       const focusIndex = Math.max(0, Math.min(LEVELS.length - 1, focusLevelId - 1));
       const previousPoint = getMapNodePosition(Math.max(0, focusIndex - 1));
       const nextPoint = getMapNodePosition(Math.min(LEVELS.length - 1, focusIndex + 1));
@@ -9983,11 +10138,11 @@ export default function App() {
         <>
           {!launchIntro ? (
             <>
-              <ProgressSidebar
+                <ProgressSidebar
                 levels={LEVELS}
                 levelResults={saveData.levelResults}
                 highestUnlockedLevel={highestUnlockedLevel}
-                selectedLevelId={selectedLevelId ?? 1}
+                selectedLevelId={effectiveSelectedLevelId}
                 runHistory={saveData.runHistory}
                 communityRunHistory={communityBoardEntries}
                 achievements={menuAchievements}
@@ -10005,7 +10160,7 @@ export default function App() {
                 onPreviousRoute={() => stepSelectedRoute(-1)}
                 onNextRoute={() => stepSelectedRoute(1)}
                 onCenterSelected={() => {
-                  handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                  handleSelectLevel(effectiveSelectedLevelId, { focus: true });
                 }}
                 onZoomIn={() => adjustMenuZoom(0.045)}
                 onZoomOut={() => adjustMenuZoom(-0.045)}
@@ -10027,15 +10182,13 @@ export default function App() {
                 onCopyRouteChallenge={copyRouteChallengeText}
                 onSelectLevel={(levelId) => {
                   handleSelectLevel(levelId, { focus: true });
-                  setSelectedLevelId(levelId);
-                  selectedLevelRef.current = levelId;
                 }}
               />
-              <ProgressSidebar
+                <ProgressSidebar
                 levels={LEVELS}
                 levelResults={saveData.levelResults}
                 highestUnlockedLevel={highestUnlockedLevel}
-                selectedLevelId={selectedLevelId ?? 1}
+                selectedLevelId={effectiveSelectedLevelId}
                 runHistory={saveData.runHistory}
                 communityRunHistory={communityBoardEntries}
                 achievements={menuAchievements}
@@ -10056,7 +10209,7 @@ export default function App() {
                 onPreviousRoute={() => stepSelectedRoute(-1)}
                 onNextRoute={() => stepSelectedRoute(1)}
                 onCenterSelected={() => {
-                  handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                  handleSelectLevel(effectiveSelectedLevelId, { focus: true });
                 }}
                 onZoomIn={() => adjustMenuZoom(0.045)}
                 onZoomOut={() => adjustMenuZoom(-0.045)}
@@ -10076,8 +10229,6 @@ export default function App() {
                 onCopyRouteChallenge={copyRouteChallengeText}
                 onSelectLevel={(levelId) => {
                   handleSelectLevel(levelId, { focus: true });
-                  setSelectedLevelId(levelId);
-                  selectedLevelRef.current = levelId;
                 }}
               />
               <Suspense fallback={<SurfaceLoader label="Loading route map" />}>
@@ -10115,20 +10266,16 @@ export default function App() {
                   onToggleAtlasFocusMode={() => setIsAtlasFocusMode((current) => !current)}
                   onFocusChallengeLevel={(levelId) => {
                       handleSelectLevel(levelId, { focus: true });
-                      setSelectedLevelId(levelId);
-                      selectedLevelRef.current = levelId;
                   }}
                   onAcceptChallenge={incomingRouteChallenge ? acceptSharedRouteChallenge : undefined}
                   onFocusFeaturedRoute={(levelId) => {
                       handleSelectLevel(levelId, { focus: true });
-                      setSelectedLevelId(levelId);
-                      selectedLevelRef.current = levelId;
                   }}
                   onToggleMute={toggleMute}
                   onToggleFullscreen={toggleFullscreen}
                   onShareRunboard={shareRunboard}
                   onCenterSelected={() => {
-                      handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                      handleSelectLevel(effectiveSelectedLevelId, { focus: true });
                   }}
                   onPreviousRoute={() => stepSelectedRoute(-1)}
                   onNextRoute={() => stepSelectedRoute(1)}
@@ -10158,7 +10305,7 @@ export default function App() {
             localRunHistory={saveData.runHistory}
             communityRunHistory={communityBoardEntries}
             maxLevelReached={saveData.maxLevelReached}
-            defaultFocusedLevelId={selectedLevelRef.current}
+            defaultFocusedLevelId={effectiveSelectedLevelId}
             leaderboardRemoteSource={leaderboardRemoteSource}
             leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
             challengeRouteId={incomingRouteChallenge?.levelId}
@@ -10176,8 +10323,6 @@ export default function App() {
             onOpenStory={openStoryMap}
             onFocusRoute={(levelId) => {
               handleSelectLevel(levelId, { focus: true });
-              setSelectedLevelId(levelId);
-              selectedLevelRef.current = levelId;
               setGameState(GameState.MENU);
             }}
             onRefreshCommunityBoard={() => {

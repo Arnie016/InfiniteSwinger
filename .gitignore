@@ -29,3 +29,4 @@ art_prompts.md
 *.njsproj
 *.sln
 *.sw?
+.vercel

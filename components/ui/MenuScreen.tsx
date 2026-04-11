@@ -576,55 +576,65 @@ function AtlasCompass({ angleDeg }: { angleDeg: number }) {
 
   return (
     <div data-ui-control className="pointer-events-none absolute bottom-4 right-4 z-20 hidden text-white lg:block">
-      <div className="atlas-panel-glow atlas-compass-card pointer-events-auto rounded-[1.8rem] border border-amber-200/14 bg-[linear-gradient(180deg,rgba(17,24,39,0.84),rgba(7,13,18,0.92))] px-4 py-3.5 shadow-[0_24px_56px_rgba(2,6,23,0.42)] backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <div className="relative h-24 w-24 shrink-0 rounded-full border border-amber-100/15 bg-[radial-gradient(circle_at_50%_38%,rgba(124,92,45,0.92),rgba(31,24,16,0.96)_52%,rgba(9,12,18,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_24px_rgba(0,0,0,0.32)]">
-            <div className="absolute inset-[6px] rounded-full border border-amber-100/14 bg-[radial-gradient(circle_at_50%_35%,rgba(112,78,34,0.55),rgba(26,21,15,0.96))]" />
-            <div className="atlas-compass-ring absolute inset-[13px] rounded-full border border-amber-100/10" />
-            {Array.from({ length: 16 }).map((_, index) => {
-              const isCardinal = index % 4 === 0;
-              return (
-                <span
-                  key={`compass-tick-${index}`}
-                  className="absolute left-1/2 top-1/2"
-                  style={{ transform: `translate(-50%, -50%) rotate(${index * 22.5}deg)` }}
-                >
-                  <span
-                    className={`absolute left-1/2 top-[8px] block -translate-x-1/2 rounded-full ${
-                      isCardinal ? 'h-4 w-[2px] bg-amber-50/70' : 'h-2.5 w-px bg-white/28'
-                    }`}
-                  />
-                </span>
-              );
-            })}
-            <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[9px] font-black uppercase tracking-[0.28em] text-amber-50/88">N</span>
-            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">E</span>
-            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">S</span>
-            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">W</span>
-            <div className="atlas-compass-glow absolute inset-[18px] rounded-full" />
-            <div
-              className="atlas-compass-needle absolute left-1/2 top-1/2 h-[66px] w-[18px]"
-              style={{ transform: `translate(-50%, -50%) rotate(${angleDeg}deg)` }}
-            >
-              <span className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[7px] border-x-transparent border-b-[30px] border-b-emerald-100" />
-              <span className="absolute left-1/2 top-[22px] h-6 w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-100 via-cyan-200 to-amber-200/10" />
-              <span className="absolute left-1/2 bottom-0 h-0 w-0 -translate-x-1/2 border-x-[6px] border-x-transparent border-t-[20px] border-t-amber-900/90" />
+      <div className="w-[17rem]">
+        <div className="atlas-panel-glow atlas-compass-card pointer-events-auto rounded-[1.8rem] border border-amber-200/14 bg-[linear-gradient(180deg,rgba(17,24,39,0.84),rgba(7,13,18,0.92))] px-4 py-4 shadow-[0_24px_56px_rgba(2,6,23,0.42)] backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="atlas-map-label text-[8px] text-amber-100/52">Captain&apos;s bearing</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-100/12 bg-black/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-50/72">
+                <Compass size={12} />
+                Route compass
+              </div>
             </div>
-            <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-100/30 bg-slate-950 shadow-[0_0_16px_rgba(250,204,21,0.14)]" />
-            <div className="absolute left-1/2 top-[18px] h-2 w-2 -translate-x-1/2 rounded-full bg-emerald-100/90 shadow-[0_0_14px_rgba(167,243,208,0.5)]" />
+            <div className="text-right">
+              <div className="text-[1.8rem] font-black leading-none text-emerald-100">{heading}</div>
+              <div className="atlas-map-label mt-1 text-[10px] text-white/42">{Math.round(normalized)}°</div>
+            </div>
           </div>
-          <div className="min-w-0 pr-1">
-            <div className="atlas-map-label text-[8px] text-amber-100/52">Captain&apos;s bearing</div>
-            <div className="mt-1 flex items-end gap-2">
-              <div className="text-[1.65rem] font-black leading-none text-emerald-100">{heading}</div>
-              <div className="atlas-map-label pb-0.5 text-[10px] text-white/42">{Math.round(normalized)}°</div>
+
+          <div className="mt-3 flex items-center gap-3">
+            <div className="relative h-28 w-28 shrink-0 rounded-full border border-amber-100/15 bg-[radial-gradient(circle_at_50%_38%,rgba(124,92,45,0.92),rgba(31,24,16,0.96)_52%,rgba(9,12,18,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_24px_rgba(0,0,0,0.32)]">
+              <div className="absolute inset-[6px] rounded-full border border-amber-100/14 bg-[radial-gradient(circle_at_50%_35%,rgba(112,78,34,0.55),rgba(26,21,15,0.96))]" />
+              <div className="atlas-compass-ring absolute inset-[13px] rounded-full border border-amber-100/10" />
+              {Array.from({ length: 16 }).map((_, index) => {
+                const isCardinal = index % 4 === 0;
+                return (
+                  <span
+                    key={`compass-tick-${index}`}
+                    className="absolute left-1/2 top-1/2"
+                    style={{ transform: `translate(-50%, -50%) rotate(${index * 22.5}deg)` }}
+                  >
+                    <span
+                      className={`absolute left-1/2 top-[8px] block -translate-x-1/2 rounded-full ${
+                        isCardinal ? 'h-4 w-[2px] bg-amber-50/70' : 'h-2.5 w-px bg-white/28'
+                      }`}
+                    />
+                  </span>
+                );
+              })}
+              <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[9px] font-black uppercase tracking-[0.28em] text-amber-50/88">N</span>
+              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">E</span>
+              <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">S</span>
+              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">W</span>
+              <div className="atlas-compass-glow absolute inset-[18px] rounded-full" />
+              <div
+                className="atlas-compass-needle absolute left-1/2 top-1/2 h-[66px] w-[18px]"
+                style={{ transform: `translate(-50%, -50%) rotate(${angleDeg}deg)` }}
+              >
+                <span className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[7px] border-x-transparent border-b-[30px] border-b-emerald-100" />
+                <span className="absolute left-1/2 top-[22px] h-6 w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-100 via-cyan-200 to-amber-200/10" />
+                <span className="absolute left-1/2 bottom-0 h-0 w-0 -translate-x-1/2 border-x-[6px] border-x-transparent border-t-[20px] border-t-amber-900/90" />
+              </div>
+              <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-100/30 bg-slate-950 shadow-[0_0_16px_rgba(250,204,21,0.14)]" />
+              <div className="absolute left-1/2 top-[18px] h-2 w-2 -translate-x-1/2 rounded-full bg-emerald-100/90 shadow-[0_0_14px_rgba(167,243,208,0.5)]" />
             </div>
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-100/12 bg-black/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-50/72">
-              <Compass size={12} />
-              Route compass
-            </div>
-            <div className="mt-2 text-[11px] leading-relaxed text-slate-300/90">
-              Keep the bow pointed clean before you play.
+            <div className="min-w-0 flex-1">
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                <div className="atlas-map-label text-[9px] text-amber-100/50">Course note</div>
+                <div className="mt-1 text-[11px] leading-relaxed text-slate-300/90">
+                  Keep the bow pointed clean before you play.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -832,14 +842,14 @@ export function MenuScreen({
 
       <div
         data-ui-control
-        className={`pointer-events-auto absolute bottom-3 left-1/2 w-[min(1120px,calc(100vw-1rem))] -translate-x-1/2 overflow-hidden rounded-[1.45rem] border border-white/10 bg-slate-950/82 p-2 shadow-[0_24px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl sm:w-[min(1080px,calc(100vw-6rem))] lg:p-1.5 xl:w-[min(1040px,calc(100vw-11rem))] ${
+        className={`pointer-events-auto absolute bottom-3 left-1/2 w-[min(1120px,calc(100vw-1rem))] -translate-x-1/2 overflow-hidden rounded-[1.45rem] border border-white/10 bg-slate-950/82 p-2 shadow-[0_24px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl sm:w-[min(1080px,calc(100vw-6rem))] lg:left-6 lg:right-[20rem] lg:w-auto lg:translate-x-0 lg:p-1.5 xl:left-[19rem] xl:right-[20rem] ${
           isAtlasFocusMode
             ? 'max-h-[min(24svh,216px)] lg:max-h-[min(18svh,164px)]'
             : 'max-h-[min(40svh,320px)] lg:max-h-[min(24svh,198px)]'
         }`}
       >
         {selectedLevel ? (
-          <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)] gap-2.5 lg:grid-cols-[minmax(0,1fr),172px] xl:grid-cols-[minmax(0,1fr),176px]">
+          <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)] gap-2.5 lg:grid-cols-[minmax(0,1fr),204px] xl:grid-cols-[minmax(0,1fr),220px]">
             <div className="atlas-scroll min-h-0 overflow-y-auto pr-1">
               {incomingChallengeRoute ? (
                 <div className="mb-2 rounded-2xl border border-cyan-200/20 bg-cyan-500/10 p-2">
@@ -1170,34 +1180,46 @@ export function MenuScreen({
               ) : null}
             </div>
 
-            <div className="atlas-scroll flex min-h-0 flex-col gap-2.5 overflow-y-auto rounded-[1.1rem] border border-white/10 bg-slate-950/72 p-2.5">
+            <div
+              className={`flex min-h-0 flex-col rounded-[1.1rem] border border-white/10 bg-slate-950/72 ${
+                isAtlasFocusMode ? 'justify-between gap-2 overflow-hidden p-2.5' : 'atlas-scroll gap-2.5 overflow-y-auto p-3'
+              }`}
+            >
               <div>
-                <div className="atlas-map-label text-[10px] text-slate-400">Launch</div>
-                <div className="mt-1 text-sm font-black text-white">
-                  {selectedLevelLocked ? 'Route still locked' : 'Launch from the dock'}
+                <div className="atlas-map-label text-[10px] text-slate-400">Play</div>
+                <div className={`font-black text-white ${isAtlasFocusMode ? 'mt-1 text-[0.98rem] leading-tight' : 'mt-1 text-[1.05rem]'}`}>
+                  {selectedLevelLocked ? 'Route still locked' : 'Play this route'}
                 </div>
-                <div className="mt-2 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-200">
-                  {selectedLevelLocked ? `Needs L${Math.max(1, selectedLevel.id - 1)} clear` : 'Play available'}
+                <div
+                  className={`inline-flex rounded-full border border-white/10 bg-white/[0.04] font-semibold uppercase tracking-[0.16em] text-slate-200 ${
+                    isAtlasFocusMode ? 'mt-1.5 px-2 py-0.5 text-[8px]' : 'mt-2 px-2.5 py-1 text-[9px]'
+                  }`}
+                >
+                  {selectedLevelLocked ? `Needs L${Math.max(1, selectedLevel.id - 1)} clear` : 'Ready'}
                 </div>
-                <div className="atlas-panel-copy mt-1.5 text-[0.7rem] leading-relaxed text-slate-300">
-                  {selectedLevelLocked
-                    ? `Clear L${Math.max(1, selectedLevel.id - 1)} first to bring this lane online.`
-                    : 'Inspect the line, then play when the swing feels right.'}
-                </div>
+                {isAtlasFocusMode ? null : (
+                  <div className="atlas-panel-copy mt-2 text-[0.76rem] leading-relaxed text-slate-300">
+                    {selectedLevelLocked
+                      ? `Clear L${Math.max(1, selectedLevel.id - 1)} first to bring this lane online.`
+                      : 'Inspect the line, then play when the swing feels right.'}
+                  </div>
+                )}
               </div>
               <button
                 onClick={onStartGame}
                 disabled={selectedLevelLocked}
-                className={`mt-auto rounded-2xl px-4 py-2 text-[0.88rem] font-bold transition-all ${
+                className={`rounded-2xl px-4 font-bold transition-all ${
+                  isAtlasFocusMode ? 'py-2.5 text-[0.94rem]' : 'mt-auto py-2.5 text-[0.98rem]'
+                } ${
                   selectedLevelLocked
                     ? 'cursor-not-allowed bg-slate-800 text-slate-500'
                     : 'bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-950/30 hover:-translate-y-0.5 hover:bg-emerald-300'
                 }`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Play size={18} />
+              >
+                <span className={`inline-flex items-center gap-2 ${isAtlasFocusMode ? 'justify-center' : ''}`}>
+                  <Play size={isAtlasFocusMode ? 17 : 18} />
                     {selectedLevelLocked ? 'Locked Route' : 'Play Route'}
-                  </span>
+                </span>
               </button>
             </div>
           </div>
