@@ -14,6 +14,9 @@ const SKIN_LABELS: Record<string, string> = {
   skin_winter: 'Yeti',
   skin_ninja: 'Ninja',
   skin_golden: 'Golden God',
+  skin_moss: 'Moss Runner',
+  skin_orchid: 'Orchid Phantom',
+  skin_ember: 'Ember Howler',
 };
 
 const ROPE_TYPE_DETAILS: Record<RopeType, { label: string; description: string }> = {
@@ -21,6 +24,8 @@ const ROPE_TYPE_DETAILS: Record<RopeType, { label: string; description: string }
   braid: { label: ROPE_TYPE_LABELS.braid, description: 'Cleaner arcs and tighter control.' },
   chain: { label: ROPE_TYPE_LABELS.chain, description: 'Heavier line with stronger stability.' },
   silk: { label: ROPE_TYPE_LABELS.silk, description: 'Long reach with a smooth recovery feel.' },
+  reed: { label: ROPE_TYPE_LABELS.reed, description: 'Buoyant over water and calmer in windy lanes.' },
+  ember: { label: ROPE_TYPE_LABELS.ember, description: 'Taut, hot, and tuned for finale pushes.' },
 };
 
 const UPGRADE_META: Record<

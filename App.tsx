@@ -1,12 +1,12 @@
 
 import React, { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import { GameState, AbilityType, Vector2, Entity, Enemy, Particle, SaveData, ShopItem, BiomeType, FloatingText, SkillChainState, SkillRank, WeatherType, LevelConfig, TutorialState, CheckpointState, GameSettings, LevelResult, RouteBeat, RouteLane, DebugFlags, PurchaseReceipt, SwingLabConfig, PlayerMoodPreset, MapRegion, SettingsTab, SaveBackupV1, VisualDensity, RunDebrief, RunHistoryEntry, StoryBeat, StoryCastId, StoryPanelScene, FeaturedRouteCup } from './types';
-import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, MousePointer2, Move, Wind, Eye, CloudRain, Snowflake, CloudFog, Leaf, Pause, PlayCircle, TrendingUp, AlertTriangle, Crosshair, Clock, Flower, Shield, Heart, Trophy, Star, Activity, Sparkles, Hourglass, Gem, Ghost, Lock, Map, CheckCircle, BookOpen, Anchor, Scroll, Shirt, Hammer, X, Sprout, Feather, LifeBuoy, Keyboard, PauseCircle, LogOut, Egg, Trash2, Brain, ChevronDown, Lightbulb, Check, HelpCircle, ArrowRight, Volume2, VolumeX, Repeat, Book, Settings, Flag } from 'lucide-react';
+import { Zap, Rocket, Grab, Play, RotateCcw, Skull, ShoppingCart, Coins, Home, MousePointer2, Move, Wind, Eye, CloudRain, Snowflake, CloudFog, Leaf, Pause, PlayCircle, TrendingUp, AlertTriangle, Crosshair, Clock, Compass, Flower, Shield, Heart, Trophy, Star, Activity, Sparkles, Hourglass, Gem, Ghost, Lock, Map as MapIcon, CheckCircle, BookOpen, Anchor, Scroll, Shirt, Hammer, X, Sprout, Feather, LifeBuoy, Keyboard, PauseCircle, LogOut, Egg, Trash2, Brain, ChevronDown, Lightbulb, Check, HelpCircle, ArrowRight, Volume2, VolumeX, Repeat, Book, Settings, Flag } from 'lucide-react';
 import { audioManager } from './services/audioManager';
 import { clearPersistedSaveData, createSaveBackup, loadSaveData, parseSaveBackup, persistSaveData } from './services/persistence';
 import { LandingScreen } from './components/ui/LandingScreen';
 import { StoryCastPortrait } from './components/ui/StoryCastPortrait';
-import { STORY_SCENE_PALETTE, getStoryCharacterProfile } from './content/storyCast';
+import { STORY_SCENE_PALETTE } from './content/storyCast';
 import { BIOMES, DEFAULT_SAVE, INTRO_STORY_SEQUENCE, LEVELS, MAP_REGIONS, ROUTE_SCRIPTS, SHOP_ITEMS, THEME_PROFILES } from './gameData';
 import { DEFAULT_DEBUG_FLAGS, DEFAULT_ENGINE_CONFIG } from './engine/config';
 import { getBundledMonkeySprite, pickMusicProfileForBiome, resolveAudioCueUrl } from './engine/assets';
@@ -14,6 +14,7 @@ import { drawMonkeyUpgradeGear, getMonkeyCosmeticState, getRopeVisualState } fro
 import { getCurrentBuildSummary, withDerivedProgression } from './engine/playerProfile';
 import { BALANCED_SWING_LAB_CONFIG, resolveSwingLabConfig } from './engine/swingLab';
 import { formatDurationMs } from './engine/uiFormat';
+import { playRouteSelectSound, prefetchRouteSelectSound } from './services/routeSelectSound';
 
 const SettingsModal = lazy(() =>
     import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal })),
@@ -43,6 +44,264 @@ function SurfaceLoader({ label }: { label: string }) {
             <div className="rounded-2xl border border-white/10 bg-slate-950/88 px-6 py-4 text-white shadow-2xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/65">Loading</div>
                 <div className="mt-2 text-2xl font-black">{label}</div>
+            </div>
+        </div>
+    );
+}
+
+const getCompassHeading = (angleDeg: number) => {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const normalized = ((angleDeg % 360) + 360) % 360;
+    const index = Math.round(normalized / 45) % directions.length;
+    return directions[index];
+};
+
+function LaunchIntroOverlay({
+    intro,
+    currentTimeMs,
+    compassAngleDeg,
+    onSkip,
+}: {
+    intro: LaunchIntroState;
+    currentTimeMs: number;
+    compassAngleDeg: number;
+    onSkip: () => void;
+}) {
+    const launchButtonRef = useRef<HTMLButtonElement | null>(null);
+    const level = LEVELS[intro.levelId - 1] ?? null;
+    const palette = STORY_SCENE_PALETTE[intro.banner.scene];
+    const remainingMs = Math.max(0, intro.endsAtMs - currentTimeMs);
+    const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+    const progress = Math.max(0, Math.min(1, 1 - remainingMs / Math.max(1, intro.durationMs)));
+    const heading = getCompassHeading(compassAngleDeg);
+    const routeLabel = level ? `L${level.id} ${level.name}` : intro.banner.title;
+
+    useEffect(() => {
+        launchButtonRef.current?.focus({ preventScroll: true });
+    }, [intro.levelId]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented) return;
+
+            const target = event.target as HTMLElement | null;
+            const tagName = target?.tagName;
+            if (target && (target.isContentEditable || tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT')) {
+                return;
+            }
+
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSkip();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [onSkip]);
+
+    return (
+        <div
+            className="fixed inset-0 z-50 overflow-hidden bg-slate-950/96 font-ui text-white"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Launch preview for ${routeLabel}`}
+        >
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.16),transparent_26%),radial-gradient(circle_at_80%_18%,rgba(52,211,153,0.13),transparent_24%),radial-gradient(circle_at_50%_82%,rgba(251,191,36,0.12),transparent_24%),linear-gradient(180deg,rgba(2,6,23,0.08),rgba(2,6,23,0.42))]" />
+            <div className="pointer-events-auto relative grid h-full w-full grid-rows-[minmax(0,0.98fr)_minmax(0,1.02fr)] lg:grid-cols-[1.08fr_0.92fr] lg:grid-rows-none">
+                <div className="relative min-h-[48svh] overflow-hidden border-b border-white/10 lg:border-b-0 lg:border-r">
+                        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 960 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true" role="presentation">
+                            <defs>
+                                <linearGradient id={`launch-sky-${intro.levelId}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={palette.skyFrom} />
+                                    <stop offset="100%" stopColor={palette.skyTo} />
+                                </linearGradient>
+                                <radialGradient id={`launch-glow-${intro.levelId}`} cx="50%" cy="26%" r="54%">
+                                    <stop offset="0%" stopColor={palette.glow} stopOpacity="0.96" />
+                                    <stop offset="100%" stopColor={palette.glow} stopOpacity="0" />
+                                </radialGradient>
+                                <radialGradient id={`launch-vignette-${intro.levelId}`} cx="50%" cy="48%" r="70%">
+                                    <stop offset="55%" stopColor="rgba(2,6,23,0)" />
+                                    <stop offset="100%" stopColor="rgba(2,6,23,0.56)" />
+                                </radialGradient>
+                            </defs>
+                            <rect x="0" y="0" width="960" height="720" fill={`url(#launch-sky-${intro.levelId})`} />
+                            <ellipse cx="488" cy="148" rx="238" ry="114" fill={`url(#launch-glow-${intro.levelId})`}>
+                                <animate attributeName="ry" values="110;124;110" dur="4.4s" repeatCount="indefinite" />
+                            </ellipse>
+                            <path d="M0 500C114 448 208 428 304 460C392 490 472 496 558 462C650 426 748 430 960 506V720H0Z" fill={palette.ridge} opacity="0.94" />
+                            <path d="M0 566C126 528 238 514 342 538C434 560 512 564 602 540C704 512 804 518 960 574V720H0Z" fill="#08111d" opacity="0.84" />
+                            <path d="M176 156L188 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
+                            <path d="M188 188C226 184 258 170 284 144" stroke="#2a4a3f" strokeWidth="12" strokeLinecap="round" />
+                            <path d="M188 222C228 228 262 220 292 196" stroke="#2a4a3f" strokeWidth="11" strokeLinecap="round" />
+                            <path d="M760 150L744 588" stroke="#1f2937" strokeWidth="20" strokeLinecap="round" />
+                            <path d="M744 188C706 182 672 168 640 140" stroke="#263646" strokeWidth="12" strokeLinecap="round" />
+                            <path d="M230 140C314 164 396 214 476 292" fill="none" stroke={palette.accent} strokeWidth="5.5" strokeLinecap="round" strokeDasharray="10 10">
+                                <animate attributeName="stroke-dashoffset" values="0;-84" dur="3.1s" repeatCount="indefinite" />
+                            </path>
+                            <g transform="translate(0 0)">
+                                <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="3.4s" repeatCount="indefinite" />
+                                <path d="M484 288C502 264 520 256 540 260C558 264 574 278 584 300C552 318 520 326 490 324C486 314 484 300 484 288Z" fill="#0b1020" />
+                                <circle cx="522" cy="240" r="24" fill="#0b1020" />
+                                <circle cx="532" cy="233" r="6" fill={palette.accent} />
+                                <path d="M510 264L500 324" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                <path d="M534 266L568 312" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                <path d="M496 286L448 300" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                <path d="M574 286L610 250" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
+                                <path d="M610 250L646 204" stroke={palette.accent} strokeWidth="6" strokeLinecap="round" />
+                            </g>
+                            <rect x="0" y="0" width="960" height="720" fill={`url(#launch-vignette-${intro.levelId})`} />
+                        </svg>
+
+                        <div className="absolute left-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
+                            Route preview
+                        </div>
+                        <div className="absolute right-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
+                            {intro.banner.kicker}
+                        </div>
+                        <div className="absolute bottom-5 left-5 max-w-[80%] rounded-[1.1rem] border border-white/15 bg-slate-950/80 px-4 py-3 shadow-2xl shadow-black/40">
+                            <div className="text-[10px] font-black uppercase tracking-[0.28em] text-white/45">{intro.banner.speaker}</div>
+                            <div className="mt-1 text-sm font-semibold leading-relaxed text-white">{intro.banner.caption}</div>
+                        </div>
+                    </div>
+
+                <div className="flex min-h-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <div className="atlas-map-label text-[10px] uppercase tracking-[0.34em] text-emerald-200/70">Route briefing</div>
+                            </div>
+                            <button
+                                ref={launchButtonRef}
+                                type="button"
+                                onClick={onSkip}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/[0.08]"
+                            >
+                                <X size={12} />
+                                Skip
+                            </button>
+                        </div>
+
+                        <div className="mt-4 rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.24)]">
+                            <div className="flex items-center gap-3">
+                                <div className="relative h-14 w-14 rounded-full border border-white/10 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.14),rgba(15,23,42,0.92))]">
+                                    <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/75">N</span>
+                                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">E</span>
+                                    <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">S</span>
+                                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">W</span>
+                                    <div
+                                        className="absolute left-1/2 top-1/2 h-[24px] w-[3px] -translate-x-1/2 -translate-y-[90%] rounded-full bg-gradient-to-b from-emerald-200 via-cyan-200 to-transparent shadow-[0_0_14px_rgba(125,211,252,0.45)] transition-transform duration-500"
+                                        style={{ transform: `translate(-50%, -90%) rotate(${compassAngleDeg}deg)` }}
+                                    />
+                                    <div className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-slate-950" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/55">Compass</div>
+                                    <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-emerald-100">
+                                        <Compass size={14} />
+                                        {heading}
+                                    </div>
+                                    <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">Route bearing</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-5">
+                            <div className="atlas-map-label text-[11px] uppercase tracking-[0.34em] text-white/55">{intro.banner.kicker}</div>
+                            <div className="atlas-title mt-2 text-4xl text-white">{routeLabel}</div>
+                            <div className="mt-3 text-[1.02rem] leading-relaxed text-slate-300">{level?.description ?? intro.banner.subtitle}</div>
+                        </div>
+
+                        {level ? (
+                            <div className="mt-5 flex flex-wrap gap-2">
+                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
+                                    {level.biome}
+                                </span>
+                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
+                                    {level.targetDistance}m route
+                                </span>
+                                <span className="atlas-chip rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
+                                    {level.checkpointCount} checkpoints
+                                </span>
+                            </div>
+                        ) : null}
+
+                        <div className="mt-5 rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.24)]">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <div className="flex shrink-0 items-start -space-x-3">
+                                        {intro.banner.characterId ? (
+                                            <StoryCastPortrait characterId={intro.banner.characterId} scene={intro.banner.scene} size={56} />
+                                        ) : null}
+                                        {intro.banner.supportCharacterId ? (
+                                            <StoryCastPortrait
+                                                characterId={intro.banner.supportCharacterId}
+                                                scene={intro.banner.scene}
+                                                size={48}
+                                                priority="support"
+                                                className="mt-5"
+                                            />
+                                        ) : null}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/45">Crew signal</div>
+                                        <div className="mt-1 text-sm font-black text-white">{intro.banner.speaker}</div>
+                                        <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{intro.banner.caption}</div>
+                                    </div>
+                                </div>
+                                <div className="rounded-full border border-white/10 bg-slate-950/55 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/65">
+                                    {intro.banner.rivalStatus}
+                                </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                                <div className="rounded-2xl border border-white/10 bg-slate-950/55 px-3 py-3">
+                                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-100/70">Mission</div>
+                                    <div className="mt-1 text-sm font-black text-white">{intro.banner.missionTitle}</div>
+                                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{intro.banner.missionDetail}</div>
+                                </div>
+                                <div className="rounded-2xl border border-white/10 bg-slate-950/55 px-3 py-3">
+                                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-cyan-100/70">Rival detail</div>
+                                    <div className="mt-1 text-[11px] leading-relaxed text-white">{intro.banner.rivalDetail}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto rounded-[1.4rem] border border-white/10 bg-slate-950/55 px-4 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-100/70">
+                                        <Clock size={12} />
+                                        Launch countdown
+                                    </div>
+                                    <div className="mt-1 text-2xl font-black text-white">{remainingSeconds}s</div>
+                                </div>
+                                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55">
+                                    Skip available
+                                </div>
+                            </div>
+
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-200 transition-[width] duration-100"
+                                    style={{ width: `${Math.round(progress * 100)}%` }}
+                                />
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[10px] uppercase tracking-[0.18em] text-white/45">
+                                <span>Esc / Enter / Space skip the preview</span>
+                                <button
+                                    type="button"
+                                    onClick={onSkip}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-500/12 px-3 py-1.5 font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/18"
+                                >
+                                    <Play size={12} />
+                                    Launch now
+                                </button>
+                            </div>
+                        </div>
+                </div>
             </div>
         </div>
     );
@@ -267,6 +526,8 @@ const LEADERBOARD_ROUTE_QUERY_KEY = 'route';
 const LEADERBOARD_VIEW_QUERY_KEY = 'view';
 const LEADERBOARD_VIEW_LEADERBOARD = 'leaderboard';
 const LEADERBOARD_SHARE_VERSION = 1;
+
+type UiPreferenceKey = 'isMuted' | 'isProgressSidebarCollapsed' | 'isRunHudDetailsOpen' | 'isAtlasFocusMode';
 const LEADERBOARD_REMOTE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const RECOMMENDATION_TREND_WINDOW_SIZE = 7;
 const RECOMMENDATION_TREND_HISTORY_SIZE = RECOMMENDATION_TREND_WINDOW_SIZE * 2;
@@ -421,6 +682,13 @@ type RunIntroBannerState = {
     missionDetail: string;
     rivalStatus: string;
     rivalDetail: string;
+};
+
+type LaunchIntroState = {
+    levelId: number;
+    banner: RunIntroBannerState;
+    endsAtMs: number;
+    durationMs: number;
 };
 
 type IncomingRouteChallenge = {
@@ -2050,12 +2318,15 @@ const getAtlasQualityForFrameMs = (frameMs: number): AtlasQuality => {
     return 'high';
 };
 
-const readUiPreferenceFlag = (key: 'isMuted', fallback: boolean) => {
+const readUiPreferenceFlag = (key: UiPreferenceKey, fallback: boolean) => {
     if (typeof window === 'undefined') return fallback;
     try {
         const raw = window.localStorage.getItem(UI_PREFERENCES_KEY);
         if (!raw) return fallback;
         const parsed = JSON.parse(raw);
+        if (typeof parsed === 'boolean') {
+            return key === 'isMuted' ? parsed : fallback;
+        }
         return typeof parsed?.[key] === 'boolean' ? parsed[key] : fallback;
     } catch {
         return fallback;
@@ -2526,7 +2797,7 @@ const getMenuCameraTargetFromState = (
         return {
             x: clamp(node.x + earlyRouteShiftX * MENU_MAP_WORLD_SCALE, CANVAS_WIDTH * 0.18, MENU_MAP_WORLD_WIDTH - CANVAS_WIDTH * 0.18),
             y: clamp(node.y + (region ? (scaleMenuMapPoint(region.focalPoint).y - node.y) * 0.08 : 0) + earlyRouteShiftY * MENU_MAP_WORLD_SCALE, CANVAS_HEIGHT * 0.2, MENU_MAP_WORLD_HEIGHT - CANVAS_HEIGHT * 0.22),
-            zoom: region ? Math.max(0.76, Math.min(0.86, region.defaultZoom - 0.16)) : 0.82,
+            zoom: region ? Math.max(0.72, Math.min(0.82, region.defaultZoom - 0.2)) : 0.78,
         };
     }
     return clampMenuCameraTarget({ ...DEFAULT_MENU_MAP_CAMERA, zoom: 0.82 });
@@ -2537,10 +2808,10 @@ const getMenuCameraTargetForLevel = (levelId: number) => {
     const node = getMapNodePosition(level.id - 1);
     const region = getMapRegionForLevel(level.id);
     const zoomTarget =
-        level.id <= 2 ? 0.98 :
-        level.id <= 4 ? 0.93 :
-        level.id <= 7 ? 0.89 :
-        0.85;
+        level.id <= 2 ? 0.92 :
+        level.id <= 4 ? 0.88 :
+        level.id <= 7 ? 0.84 :
+        0.8;
     const anchor = getMenuFocusAnchorForLevel(level.id, zoomTarget);
     const regionFocal = region ? scaleMenuMapPoint(region.focalPoint) : node;
     const regionBias = level.id <= 2 ? 0.18 : level.id >= 8 ? 0.08 : 0.12;
@@ -2827,12 +3098,16 @@ export default function App() {
   const [isSaveHydrated, setIsSaveHydrated] = useState(false);
   const [saveRecoveryNotice, setSaveRecoveryNotice] = useState<string | null>(null);
   const [checkpointBanner, setCheckpointBanner] = useState<string | null>(null);
-  const [runIntroBanner, setRunIntroBanner] = useState<RunIntroBannerState | null>(null);
   const [communityBoardEntries, setCommunityBoardEntries] = useState<LeaderboardBoardEntry[]>([]);
   const [leaderboardAlias, setLeaderboardAlias] = useState(() => readLeaderboardAlias());
   const [leaderboardRemoteSource, setLeaderboardRemoteSource] = useState(() => readLeaderboardRemoteSource());
   const [leaderboardRemoteSyncAt, setLeaderboardRemoteSyncAt] = useState<number | null>(() => readLeaderboardRemoteSyncAt());
   const [isProgressDrawerOpen, setIsProgressDrawerOpen] = useState(false);
+  const [isProgressSidebarCollapsed, setIsProgressSidebarCollapsed] = useState(() => readUiPreferenceFlag('isProgressSidebarCollapsed', true));
+  const [isRunHudDetailsOpen, setIsRunHudDetailsOpen] = useState(() => readUiPreferenceFlag('isRunHudDetailsOpen', false));
+  const [isAtlasFocusMode, setIsAtlasFocusMode] = useState(() => readUiPreferenceFlag('isAtlasFocusMode', true));
+  const [launchIntro, setLaunchIntro] = useState<LaunchIntroState | null>(null);
+  const [launchIntroClockMs, setLaunchIntroClockMs] = useState(() => Date.now());
   const [pendingSharedLeaderboardOpen, setPendingSharedLeaderboardOpen] = useState(false);
   const [incomingRouteChallenge, setIncomingRouteChallenge] = useState<IncomingRouteChallenge | null>(null);
 
@@ -2948,8 +3223,18 @@ export default function App() {
 
   useEffect(() => {
       if (typeof window === 'undefined') return;
-      window.localStorage.setItem(UI_PREFERENCES_KEY, JSON.stringify({ isMuted }));
-  }, [isMuted]);
+      window.localStorage.setItem(UI_PREFERENCES_KEY, JSON.stringify({
+        isMuted,
+        isProgressSidebarCollapsed,
+        isRunHudDetailsOpen,
+        isAtlasFocusMode,
+      }));
+  }, [isMuted, isProgressSidebarCollapsed, isRunHudDetailsOpen, isAtlasFocusMode]);
+
+  useEffect(() => {
+      if (!isAtlasFocusMode) return;
+      setIsProgressSidebarCollapsed(true);
+  }, [isAtlasFocusMode]);
 
   useEffect(() => {
       persistLeaderboardAlias(leaderboardAlias);
@@ -3139,6 +3424,16 @@ export default function App() {
       setShowSettings(true);
   }, []);
 
+  const getPreferredMenuFocusLevelId = useCallback(() => {
+      return Math.max(
+          1,
+          Math.min(
+              selectedLevelId ?? saveDataRef.current.lastSelectedLevelId ?? selectedLevelRef.current ?? 1,
+              LEVELS.length,
+          ),
+      );
+  }, [selectedLevelId]);
+
   const enableManualMenuCameraControl = useCallback(() => {
       if (gameStateRef.current === GameState.PLAYING || menuCameraControlModeRef.current === 'manual') return;
       const storyBeat = INTRO_STORY_SEQUENCE.beats[storyBeatIndexRef.current] ?? INTRO_STORY_SEQUENCE.beats[0];
@@ -3163,19 +3458,37 @@ export default function App() {
       const focusTarget = getMenuCameraTargetForLevel(levelId);
       const currentCamera = menuMapCameraRef.current;
       const isSameSelection = selectedLevelRef.current === levelId;
+      const selectedLevelEntry = LEVELS.find((level) => level.id === levelId) ?? null;
       const focusDistance = Math.hypot(currentCamera.x - focusTarget.x, currentCamera.y - focusTarget.y);
       const zoomDistance = Math.abs(currentCamera.zoom - focusTarget.zoom);
       const shouldRetargetCamera = focus && (!isSameSelection || focusDistance > 36 || zoomDistance > 0.035);
+      const isLockedRoute = levelId > Math.min(saveDataRef.current.maxLevelReached, LEVELS.length);
 
       if (!isSameSelection) {
           setSelectedLevelId(levelId);
       }
       selectedLevelRef.current = levelId;
+      if (focus && gameStateRef.current !== GameState.PLAYING && selectedLevelEntry) {
+          const highestUnlockedLevel = Math.max(1, Math.min(saveDataRef.current.maxLevelReached, LEVELS.length));
+          const levelIndex = LEVELS.findIndex((level) => level.id === levelId);
+          if (levelIndex >= 0) {
+              [levelIndex - 1, levelIndex, levelIndex + 1].forEach((neighborIndex) => {
+                  const neighborLevel = LEVELS[neighborIndex];
+                  if (!neighborLevel) return;
+                  void prefetchRouteSelectSound(neighborLevel, neighborLevel.id > highestUnlockedLevel);
+              });
+          }
+      }
       if (gameStateRef.current !== GameState.PLAYING && shouldRetargetCamera) {
+          const transitionDurationMs = clamp(
+              440 + focusDistance * 0.18 + zoomDistance * 1800,
+              460,
+              940,
+          );
           const immediateCamera = clampMenuCameraTarget({
-              x: lerpNumber(currentCamera.x, focusTarget.x, 0.24),
-              y: lerpNumber(currentCamera.y, focusTarget.y, 0.24),
-              zoom: lerpNumber(currentCamera.zoom, focusTarget.zoom, 0.22),
+              x: lerpNumber(currentCamera.x, focusTarget.x, 0.12),
+              y: lerpNumber(currentCamera.y, focusTarget.y, 0.12),
+              zoom: lerpNumber(currentCamera.zoom, focusTarget.zoom, 0.1),
           });
           menuMapCameraRef.current = immediateCamera;
           menuCameraControlModeRef.current = 'auto';
@@ -3183,7 +3496,7 @@ export default function App() {
               from: { ...immediateCamera },
               to: focusTarget,
               startTime: performance.now(),
-              durationMs: gameStateRef.current === GameState.STORY_MAP ? 240 : 300,
+              durationMs: gameStateRef.current === GameState.STORY_MAP ? 260 : transitionDurationMs,
           };
           menuPanOffsetRef.current = { x: 0, y: 0 };
           menuPanVelocityRef.current = { x: 0, y: 0 };
@@ -3198,7 +3511,23 @@ export default function App() {
               lastSelectedLevelId: levelId,
           };
       });
+      if (focus && gameStateRef.current !== GameState.PLAYING && selectedLevelEntry) {
+          void playRouteSelectSound(selectedLevelEntry, {
+              locked: isLockedRoute,
+              muted: isMutedRef.current,
+          });
+      }
   }, [commitSaveData]);
+
+  const stepSelectedRoute = useCallback((direction: -1 | 1) => {
+      const currentHighestUnlockedLevel = Math.max(1, Math.min(saveDataRef.current.maxLevelReached, LEVELS.length));
+      const currentLevelId = selectedLevelId ?? currentHighestUnlockedLevel;
+      const currentIndex = LEVELS.findIndex((level) => level.id === currentLevelId);
+      if (currentIndex < 0) return;
+      const nextLevel = LEVELS[currentIndex + direction];
+      if (!nextLevel) return;
+      handleSelectLevel(nextLevel.id, { focus: true });
+  }, [handleSelectLevel, selectedLevelId]);
 
   const adjustMenuZoom = useCallback((delta: number) => {
       if (gameStateRef.current === GameState.PLAYING) return;
@@ -3227,13 +3556,15 @@ export default function App() {
       menuCameraZoomOffsetRef.current = 0;
       menuCameraControlModeRef.current = 'auto';
       if (gameStateRef.current === GameState.PLAYING) return;
-      handleSelectLevel(selectedLevelId ?? selectedLevelRef.current, { focus: true });
+      const currentHighestUnlockedLevel = Math.max(1, Math.min(saveDataRef.current.maxLevelReached, LEVELS.length));
+      handleSelectLevel(selectedLevelId ?? currentHighestUnlockedLevel, { focus: true });
   }, [handleSelectLevel, selectedLevelId]);
 
   const completeStoryIntro = useCallback(() => {
       setStoryBeatIndex(0);
       setHoveredLevelId(null);
-      handleSelectLevel(1, { focus: true });
+      const focusLevelId = getPreferredMenuFocusLevelId();
+      handleSelectLevel(focusLevelId, { focus: true });
       menuFocusTransitionRef.current = null;
       menuPanOffsetRef.current = { x: 0, y: 0 };
       menuPanVelocityRef.current = { x: 0, y: 0 };
@@ -3242,25 +3573,26 @@ export default function App() {
       commitSaveData((prev) => ({
           ...prev,
           hasCompletedStoryIntro: true,
-          lastSelectedLevelId: 1,
+          lastSelectedLevelId: focusLevelId,
       }));
       setGameState(GameState.MENU);
-  }, [commitSaveData, handleSelectLevel]);
+  }, [commitSaveData, getPreferredMenuFocusLevelId, handleSelectLevel]);
 
   const openStoryMap = useCallback(() => {
       setIsProgressDrawerOpen(false);
       setShowSettings(false);
       setStoryBeatIndex(0);
       setHoveredLevelId(null);
-      setSelectedLevelId(1);
-      selectedLevelRef.current = 1;
+      const focusLevelId = getPreferredMenuFocusLevelId();
+      setSelectedLevelId(focusLevelId);
+      selectedLevelRef.current = focusLevelId;
       menuFocusTransitionRef.current = null;
       menuPanOffsetRef.current = { x: 0, y: 0 };
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuCameraZoomOffsetRef.current = 0;
       menuCameraControlModeRef.current = 'auto';
       setGameState(GameState.STORY_MAP);
-  }, []);
+  }, [getPreferredMenuFocusLevelId]);
 
   const returnToMainMenu = useCallback(() => {
       setIsProgressDrawerOpen(false);
@@ -3274,8 +3606,8 @@ export default function App() {
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuFocusTransitionRef.current = null;
       menuCameraControlModeRef.current = 'auto';
-      handleSelectLevel(selectedLevelRef.current, { focus: true });
-  }, [handleSelectLevel]);
+      handleSelectLevel(getPreferredMenuFocusLevelId(), { focus: true });
+  }, [getPreferredMenuFocusLevelId, handleSelectLevel]);
 
   const openLeaderboardScreen = useCallback(() => {
       setIsProgressDrawerOpen(false);
@@ -3287,11 +3619,11 @@ export default function App() {
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuFocusTransitionRef.current = null;
       menuCameraControlModeRef.current = 'auto';
-      const focusLevelId = selectedLevelRef.current || saveDataRef.current.lastSelectedLevelId || 1;
+      const focusLevelId = getPreferredMenuFocusLevelId();
       if (focusLevelId) {
           handleSelectLevel(focusLevelId, { focus: true });
       }
-  }, [handleSelectLevel]);
+  }, [getPreferredMenuFocusLevelId, handleSelectLevel]);
 
   useEffect(() => {
       if (!pendingSharedLeaderboardOpen || !isSaveHydrated) return;
@@ -3397,21 +3729,35 @@ export default function App() {
       if (targetItemId) {
           markRecommendationOpened(targetItemId);
       }
-      setActiveTab('UPGRADES');
+      const targetItem = targetItemId ? SHOP_ITEMS.find((item) => item.id === targetItemId) ?? null : null;
+      setActiveTab(targetItem?.type === 'ROPE' ? 'ROPES' : targetItem?.type === 'SKIN' ? 'SKINS' : 'UPGRADES');
       setRecommendedShopItemId(targetItemId);
       setGameState(GameState.SHOP);
   }, [markRecommendationOpened]);
+
+  const openShopForBuildEntry = useCallback((entryKey: string) => {
+      const targetItem = SHOP_ITEMS.find((item) => item.upgradeKey === entryKey) ?? null;
+      openShopScreen(targetItem?.id ?? null);
+  }, [openShopScreen]);
+
+  const grantTestWallet = useCallback(() => {
+      commitSaveData((prev) => ({
+          ...prev,
+          totalTokens: Math.max(prev.totalTokens, 5000),
+      }));
+      setSaveRecoveryNotice('Test wallet topped up to 5000 tokens.');
+  }, [commitSaveData]);
 
   const handleLandingPlay = useCallback(() => {
       if (saveDataRef.current.hasCompletedStoryIntro) {
           setStoryBeatIndex(0);
           setHoveredLevelId(null);
-          handleSelectLevel(Math.max(1, selectedLevelRef.current || saveDataRef.current.lastSelectedLevelId || 1), { focus: true });
+          handleSelectLevel(getPreferredMenuFocusLevelId(), { focus: true });
           setGameState(GameState.MENU);
           return;
       }
       openStoryMap();
-  }, [handleSelectLevel, openStoryMap]);
+  }, [getPreferredMenuFocusLevelId, handleSelectLevel, openStoryMap]);
 
   const handleStoryNext = useCallback(() => {
       if (storyBeatIndexRef.current >= INTRO_STORY_SEQUENCE.beats.length - 1) {
@@ -3420,6 +3766,10 @@ export default function App() {
       }
       setStoryBeatIndex((current) => current + 1);
   }, [completeStoryIntro]);
+
+  const handleStoryPrevious = useCallback(() => {
+      setStoryBeatIndex((current) => Math.max(0, current - 1));
+  }, []);
 
   const handleStorySkip = useCallback(() => {
       completeStoryIntro();
@@ -3868,7 +4218,6 @@ export default function App() {
   const focusTimerRef = useRef(0);
   const focusCooldownRef = useRef(0);
   const checkpointBannerTimerRef = useRef(0);
-  const runIntroBannerTimerRef = useRef(0);
   const musicSessionCounterRef = useRef(0);
   const atlasPerformanceRef = useRef<{ avgFrameMs: number; quality: AtlasQuality }>({ avgFrameMs: 16.7, quality: 'high' });
   const currentMusicProfileRef = useRef<MusicProfile>(buildSessionMusicProfile('JUNGLE', 1, 0));
@@ -3907,6 +4256,7 @@ export default function App() {
       durationMs: 900,
       easing: 'easeInOut' as const,
   });
+  const launchIntroRef = useRef<LaunchIntroState | null>(null);
 
   const monkey = useRef({
     position: { x: 200, y: 300 },
@@ -4366,7 +4716,7 @@ export default function App() {
           backdropCtx.textAlign = 'center';
           backdropCtx.translate(x, y);
           backdropCtx.rotate(r);
-          backdropCtx.font = `700 ${Math.round(34 * scale)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+          backdropCtx.font = `600 ${Math.round(40 * scale)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
           backdropCtx.shadowColor = 'rgba(0, 0, 0, 0.28)';
           backdropCtx.shadowBlur = quality === 'low' ? 0 : 8;
           backdropCtx.fillText(txt, 0, 0);
@@ -4391,8 +4741,8 @@ export default function App() {
           backdropCtx.shadowColor = 'rgba(0, 0, 0, 0.2)';
           backdropCtx.shadowBlur = quality === 'low' ? 0 : 6;
           backdropCtx.font = quality === 'low'
-              ? `700 ${Math.round(17 * MENU_MAP_WORLD_SCALE)}px 'Rajdhani', 'Space Grotesk', sans-serif`
-              : `700 ${Math.round(19 * MENU_MAP_WORLD_SCALE)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+              ? `700 ${Math.round(19 * MENU_MAP_WORLD_SCALE)}px 'Rajdhani', 'Space Grotesk', sans-serif`
+              : `700 ${Math.round(22 * MENU_MAP_WORLD_SCALE)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
           backdropCtx.fillText(region.label.toUpperCase(), scaledRegion.focalPoint.x, scaledRegion.bounds.y + 28 * MENU_MAP_WORLD_SCALE);
           backdropCtx.restore();
       });
@@ -5709,12 +6059,16 @@ export default function App() {
     }
   };
 
-  const startGame = useCallback((levelId: number) => {
+  const startGameImmediate = useCallback((levelId: number) => {
     clearRecommendationTrace();
     recommendationRunIdRef.current += 1;
     setRecommendationSessionMetrics(EMPTY_RECOMMENDATION_METRICS);
     const level = LEVELS[levelId - 1];
-    if (level.id > saveData.maxLevelReached) return;
+    if (!level || level.id > saveData.maxLevelReached) return;
+
+    launchIntroRef.current = null;
+    setLaunchIntro(null);
+
     musicSessionCounterRef.current += 1;
     currentMusicProfileRef.current = buildSessionMusicProfile(level.biome, level.id, musicSessionCounterRef.current);
 
@@ -5744,8 +6098,6 @@ export default function App() {
     setRunCampaignChallengeResult(null);
     setRunFeaturedRouteCupResult(null);
     setGameState(GameState.PLAYING);
-    setRunIntroBanner(buildRunIntroBanner(level, saveDataRef.current, communityBoardEntries));
-    runIntroBannerTimerRef.current = 3.4;
     setWeather({ type: level.allowedWeather[0] || 'CLEAR', timer: randomRange(2000, 5000) });
     setSkillChainUI({ active: false, currentScore: 0, multiplier: 1, events: [], timer: 0, rank: 'GROOVIN' });
     runDebriefRef.current = createInitialRunDebrief();
@@ -5846,7 +6198,62 @@ export default function App() {
     spawnCheckpointStructures(level);
     spawnLevelSegment(STARTER_ZONE_END);
     spawnLevelSegment(STARTER_ZONE_END + 500);
-  }, [clearRecommendationTrace, commitSaveData, communityBoardEntries, saveData]);
+  }, [clearRecommendationTrace, commitSaveData, saveData]);
+
+    const queueGameLaunch = useCallback((levelId: number) => {
+    const level = LEVELS[levelId - 1];
+    if (!level || level.id > saveDataRef.current.maxLevelReached) return;
+
+    setShowSettings(false);
+    setIsProgressDrawerOpen(false);
+    setGameState(GameState.MENU);
+    setIsPaused(false);
+    setStoryBeatIndex(0);
+    setHoveredLevelId(null);
+    menuFocusTransitionRef.current = null;
+    menuPanOffsetRef.current = { x: 0, y: 0 };
+    menuPanVelocityRef.current = { x: 0, y: 0 };
+    menuCameraZoomOffsetRef.current = 0;
+    menuCameraControlModeRef.current = 'auto';
+    handleSelectLevel(levelId, { focus: true });
+
+    const banner = buildRunIntroBanner(level, saveDataRef.current, communityBoardEntries);
+    const launchDelayMs = 5000;
+    const nextLaunch: LaunchIntroState = {
+      levelId,
+      banner,
+      endsAtMs: Date.now() + launchDelayMs,
+      durationMs: launchDelayMs,
+    };
+
+    launchIntroRef.current = nextLaunch;
+    setLaunchIntro(nextLaunch);
+    setLaunchIntroClockMs(Date.now());
+  }, [communityBoardEntries, handleSelectLevel]);
+
+  const launchQueuedGame = useCallback((levelId: number) => {
+    launchIntroRef.current = null;
+    setLaunchIntro(null);
+    startGameImmediate(levelId);
+  }, [startGameImmediate]);
+
+  useEffect(() => {
+    if (!launchIntro) return undefined;
+
+    const timerId = window.setInterval(() => {
+      setLaunchIntroClockMs(Date.now());
+    }, 100);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [launchIntro]);
+
+  useEffect(() => {
+    if (!launchIntro) return;
+    if (launchIntroClockMs < launchIntro.endsAtMs) return;
+    launchQueuedGame(launchIntro.levelId);
+  }, [launchIntro, launchIntroClockMs, launchQueuedGame]);
 
   const acceptSharedRouteChallenge = useCallback(
       (levelId: number) => {
@@ -5858,9 +6265,9 @@ export default function App() {
 
           clearRecommendationTrace();
           setIncomingRouteChallenge(null);
-          startGame(levelId);
+          queueGameLaunch(levelId);
       },
-      [clearRecommendationTrace, saveData.maxLevelReached, setSaveRecoveryNotice, startGame],
+      [clearRecommendationTrace, queueGameLaunch, saveData.maxLevelReached, setSaveRecoveryNotice],
   );
 
   const handleGameOver = useCallback((isWin: boolean) => {
@@ -6427,11 +6834,13 @@ export default function App() {
      } else if (gameStateRef.current !== GameState.PLAYING && menuFocusTransitionRef.current) {
          const transition = menuFocusTransitionRef.current;
          const progress = transition.durationMs > 0 ? clamp((now - transition.startTime) / transition.durationMs, 0, 1) : 1;
-         const eased = easeValue(progress, 'easeOut');
+         const eased = easeValue(progress, 'easeInOut');
+         const travelDistance = Math.hypot(transition.to.x - transition.from.x, transition.to.y - transition.from.y);
+         const zoomPullback = Math.sin(progress * Math.PI) * Math.min(0.08, travelDistance / 5200);
          cameraTarget = {
              x: lerpNumber(transition.from.x, transition.to.x, eased),
              y: lerpNumber(transition.from.y, transition.to.y, eased),
-             zoom: lerpNumber(transition.from.zoom, transition.to.zoom, eased),
+             zoom: lerpNumber(transition.from.zoom, transition.to.zoom, eased) - zoomPullback,
          };
          if (progress >= 1) menuFocusTransitionRef.current = null;
      } else if (!selectedTarget && presentation.mapCameraStyle !== 'steady' && presentation.menuParallax === 'on') {
@@ -6670,6 +7079,46 @@ export default function App() {
              else ctx.lineTo(x, y);
          });
          ctx.stroke();
+
+         const routePoints = LEVELS.slice(0, selectedLevel.id).map((_, index) => getMapNodePosition(index));
+         if (routePoints.length > 1) {
+             const segmentLengths = routePoints.slice(1).map((point, index) => {
+                 const previous = routePoints[index];
+                 return Math.hypot(point.x - previous.x, point.y - previous.y);
+             });
+             const totalLength = segmentLengths.reduce((sum, value) => sum + value, 0);
+             if (totalLength > 0) {
+                 for (let pulseIndex = 0; pulseIndex < 3; pulseIndex += 1) {
+                     const distanceAlongPath = ((now * 0.11) + pulseIndex * totalLength * 0.28) % totalLength;
+                     let traversed = 0;
+                     let pulseX = routePoints[0].x;
+                     let pulseY = routePoints[0].y;
+
+                     for (let segmentIndex = 0; segmentIndex < segmentLengths.length; segmentIndex += 1) {
+                         const segmentLength = segmentLengths[segmentIndex];
+                         if (distanceAlongPath <= traversed + segmentLength || segmentIndex === segmentLengths.length - 1) {
+                             const from = routePoints[segmentIndex];
+                             const to = routePoints[segmentIndex + 1];
+                             const segmentProgress = clamp((distanceAlongPath - traversed) / Math.max(1, segmentLength), 0, 1);
+                             pulseX = lerpNumber(from.x, to.x, segmentProgress);
+                             pulseY = lerpNumber(from.y, to.y, segmentProgress);
+                             break;
+                         }
+                         traversed += segmentLength;
+                     }
+
+                     const pulseRadius = 5 + Math.sin(now * 0.005 + pulseIndex) * 1.8;
+                     ctx.save();
+                     ctx.shadowColor = pulseIndex === 0 ? 'rgba(191, 255, 219, 0.9)' : 'rgba(125, 211, 252, 0.8)';
+                     ctx.shadowBlur = 18;
+                     ctx.fillStyle = pulseIndex === 0 ? 'rgba(236, 253, 245, 0.96)' : 'rgba(186, 230, 253, 0.88)';
+                     ctx.beginPath();
+                     ctx.arc(pulseX, pulseY, pulseRadius, 0, Math.PI * 2);
+                     ctx.fill();
+                     ctx.restore();
+                 }
+             }
+         }
          ctx.restore();
      }
 
@@ -6845,7 +7294,7 @@ export default function App() {
          ctx.fill();
          ctx.globalAlpha = 1;
          ctx.save();
-         ctx.font = `700 ${Math.round((isSelected || isCurrent ? 18 : 15) * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+         ctx.font = `700 ${Math.round((isSelected || isCurrent ? 20 : 17) * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
          ctx.textAlign = 'center';
          ctx.textBaseline = 'middle';
          ctx.fillStyle = isSelected || isCurrent || isStoryFocus ? '#f8fafc' : isHovered ? '#d9f9ff' : 'rgba(241,245,249,0.92)';
@@ -6857,7 +7306,7 @@ export default function App() {
          if (isSelected || isStoryFocus || isHovered || isCurrent) {
              const label = `${level.name}`;
              ctx.save();
-             ctx.font = `700 ${Math.round(12 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+             ctx.font = `700 ${Math.round(13 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
              const labelWidth = ctx.measureText(label).width + 26;
              const labelX = x - labelWidth / 2;
              const placeAbove = y + radius + 48 > MENU_MAP_WORLD_HEIGHT - 12;
@@ -6876,7 +7325,7 @@ export default function App() {
          if (!isLocked && rivalMarker && isStoryVisible) {
              const chipText = rivalMarker.label.toUpperCase();
              ctx.save();
-             ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+             ctx.font = `700 ${Math.round(11 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
              const chipPaddingX = 10;
              const chipWidth = ctx.measureText(chipText).width + chipPaddingX * 2;
              const chipHeight = rivalMarker.isPriority ? 21 : 18;
@@ -6958,12 +7407,12 @@ export default function App() {
          ctx.textAlign = 'left';
          ctx.textBaseline = 'alphabetic';
          ctx.fillStyle = 'rgba(226, 232, 240, 0.66)';
-         ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+         ctx.font = `700 ${Math.round(11 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
          ctx.fillText('ATLAS PRESSURE', legendX + 16, legendY + 16);
 
          let chipCursorX = legendX + 14;
          markerLegend.forEach((item) => {
-             ctx.font = `700 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+             ctx.font = `700 ${Math.round(11 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
              const chipWidth = ctx.measureText(item.label.toUpperCase()).width + 18;
              const chipY = legendY + 26;
              ctx.beginPath();
@@ -6982,7 +7431,7 @@ export default function App() {
          ctx.textAlign = 'left';
          ctx.textBaseline = 'alphabetic';
          ctx.fillStyle = 'rgba(226, 232, 240, 0.58)';
-         ctx.font = `600 ${Math.round(9 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
+         ctx.font = `600 ${Math.round(10 * MENU_MAP_WORLD_SCALE * 0.72)}px 'Rajdhani', 'Space Grotesk', sans-serif`;
          ctx.fillText('Imported boards now tag contested routes directly on the atlas.', legendX + 16, legendY + 49);
          ctx.restore();
      }
@@ -7858,10 +8307,6 @@ export default function App() {
     if (Math.random() < 0.1) spawnWeatherParticles();
     if (focusTimerRef.current > 0) focusTimerRef.current = Math.max(0, focusTimerRef.current - dt);
     if (focusCooldownRef.current > 0) focusCooldownRef.current = Math.max(0, focusCooldownRef.current - dt);
-    if (runIntroBannerTimerRef.current > 0) {
-        runIntroBannerTimerRef.current = Math.max(0, runIntroBannerTimerRef.current - dt);
-        if (runIntroBannerTimerRef.current === 0) setRunIntroBanner(null);
-    }
     if (skillChain.current.active) {
         skillChain.current.timer = Math.max(0, skillChain.current.timer - dt * 60);
         if (skillChain.current.timer === 0) {
@@ -8458,6 +8903,35 @@ export default function App() {
       const handleKeyDown = (e: KeyboardEvent) => {
           const currentGameState = gameStateRef.current;
           const gameplayLive = currentGameState === GameState.PLAYING && !isPausedRef.current;
+          if (launchIntroRef.current) {
+              if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') {
+                  e.preventDefault();
+                  launchQueuedGame(launchIntroRef.current.levelId);
+              }
+              return;
+          }
+          if (currentGameState === GameState.MENU && !isUiControlTarget(e.target)) {
+              if (e.code === 'ArrowLeft') {
+                  e.preventDefault();
+                  stepSelectedRoute(-1);
+                  return;
+              }
+              if (e.code === 'ArrowRight') {
+                  e.preventDefault();
+                  stepSelectedRoute(1);
+                  return;
+              }
+              if (e.code === 'Home') {
+                  e.preventDefault();
+                  handleSelectLevel(1, { focus: true });
+                  return;
+              }
+              if (e.code === 'End') {
+                  e.preventDefault();
+                  handleSelectLevel(LEVELS.length, { focus: true });
+                  return;
+              }
+          }
           if (e.code === 'KeyD' || e.code === 'ArrowRight') inputRef.current.keys.right = true;
           if (e.code === 'KeyA' || e.code === 'ArrowLeft') inputRef.current.keys.left = true;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') inputRef.current.keys.up = true;
@@ -8487,7 +8961,7 @@ export default function App() {
           }
           if (e.code === 'Enter' && currentGameState === GameState.MENU) {
               e.preventDefault();
-              if (selectedLevelId !== null) startGame(selectedLevelId);
+              if (selectedLevelId !== null) queueGameLaunch(selectedLevelId);
           }
           if (e.code === 'KeyH' && currentGameState === GameState.PLAYING && tutorialRef.current.active) {
               e.preventDefault();
@@ -8636,6 +9110,7 @@ export default function App() {
       const handleDoubleClick = (e: MouseEvent) => {
           if (isUiControlTarget(e.target)) return;
           const currentGameState = gameStateRef.current;
+          if (launchIntroRef.current && currentGameState === GameState.MENU) return;
           if (currentGameState === GameState.MENU) {
               const pointer = getCanvasPointerPosition(e.clientX, e.clientY);
               if (!pointer) return;
@@ -8644,7 +9119,7 @@ export default function App() {
               if (!hoveredLevelId) return;
               if (selectedLevelRef.current !== hoveredLevelId) handleSelectLevel(hoveredLevelId, { focus: true });
               if (hoveredLevelId <= Math.min(saveData.maxLevelReached, LEVELS.length)) {
-                  startGame(hoveredLevelId);
+                  queueGameLaunch(hoveredLevelId);
               }
               return;
           }
@@ -8673,6 +9148,7 @@ export default function App() {
   };
       const handleMouseMove = (e: MouseEvent) => {
           const currentGameState = gameStateRef.current;
+          if (launchIntroRef.current && currentGameState === GameState.MENU) return;
           const pointer = getCanvasPointerPosition(e.clientX, e.clientY);
           if (pointer) {
               if (menuDragRef.current.active && (currentGameState === GameState.MENU || currentGameState === GameState.LANDING || currentGameState === GameState.STORY_MAP)) {
@@ -8727,6 +9203,7 @@ export default function App() {
       const handleWheel = (e: WheelEvent) => {
           const currentGameState = gameStateRef.current;
           if (!(currentGameState === GameState.MENU || currentGameState === GameState.LANDING || currentGameState === GameState.STORY_MAP)) return;
+          if (launchIntroRef.current && currentGameState === GameState.MENU) return;
           if (isUiControlTarget(e.target)) return;
           const pointer = getCanvasPointerPosition(e.clientX, e.clientY);
           if (!pointer) return;
@@ -8773,7 +9250,7 @@ export default function App() {
           window.removeEventListener('wheel', handleWheel);
           window.removeEventListener('blur', handleWindowBlur);
       }
-  }, [enableManualMenuCameraControl, extendSwingRope, handleSelectLevel, saveData.maxLevelReached, selectedLevelId, startGame, toggleFullscreen, toggleMute, togglePause]);
+  }, [enableManualMenuCameraControl, extendSwingRope, handleSelectLevel, launchQueuedGame, queueGameLaunch, saveData.maxLevelReached, selectedLevelId, stepSelectedRoute, toggleFullscreen, toggleMute, togglePause]);
 
   useEffect(() => {
       if (!import.meta.env.DEV) return;
@@ -8910,6 +9387,32 @@ export default function App() {
     ? LEVELS.find((entry) => entry.id === incomingRouteChallenge.levelId) ?? null
     : null;
   const selectedLevelLocked = selectedLevel ? selectedLevel.id > highestUnlockedLevel : true;
+  useEffect(() => {
+      if (gameState === GameState.PLAYING) return;
+
+      const selectedRoute = selectedLevel ?? LEVELS[Math.max(0, highestUnlockedLevel - 1)] ?? LEVELS[0];
+      const hoveredRoute = hoveredLevelId !== null ? LEVELS.find((level) => level.id === hoveredLevelId) ?? null : null;
+      const routesToWarm = new Map<number, LevelConfig>();
+
+      const addWarmTargets = (level: LevelConfig | null) => {
+          if (!level) return;
+          const levelIndex = LEVELS.findIndex((entry) => entry.id === level.id);
+          if (levelIndex < 0) return;
+          [levelIndex - 1, levelIndex, levelIndex + 1].forEach((neighborIndex) => {
+              const neighborLevel = LEVELS[neighborIndex];
+              if (!neighborLevel) return;
+              routesToWarm.set(neighborLevel.id, neighborLevel);
+          });
+      };
+
+      addWarmTargets(selectedRoute);
+      addWarmTargets(hoveredRoute);
+
+      routesToWarm.forEach((level) => {
+          const locked = level.id > highestUnlockedLevel;
+          void prefetchRouteSelectSound(level, locked);
+      });
+  }, [gameState, highestUnlockedLevel, hoveredLevelId, selectedLevel?.id]);
   const campaignChallenge = buildCampaignChallenge(saveData, highestUnlockedLevel, communityBoardEntries);
   const featuredRouteCup = buildFeaturedRouteCup(saveData, highestUnlockedLevel, communityBoardEntries);
   const menuAchievements = resolveMenuAchievements(saveData, communityBoardEntries);
@@ -8923,6 +9426,16 @@ export default function App() {
   const activeFeaturedRoutePressure = buildActiveFeaturedCupPressure(previewLevel, featuredRouteCup, score);
   const activeRouteBeat = getScriptedRouteBeat(previewLevel, currentPlayer.position.x);
   const currentBuildSummary = getCurrentBuildSummary(saveData, selectedLevel);
+  const atlasCompassAngleDeg = (() => {
+      const focusLevelId = selectedLevel?.id ?? selectedLevelRef.current ?? 1;
+      const focusIndex = Math.max(0, Math.min(LEVELS.length - 1, focusLevelId - 1));
+      const previousPoint = getMapNodePosition(Math.max(0, focusIndex - 1));
+      const nextPoint = getMapNodePosition(Math.min(LEVELS.length - 1, focusIndex + 1));
+      const dx = nextPoint.x - previousPoint.x;
+      const dy = nextPoint.y - previousPoint.y;
+      if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return 0;
+      return Math.atan2(dx, -dy) * (180 / Math.PI);
+  })();
   const currentStoryBeat = INTRO_STORY_SEQUENCE.beats[storyBeatIndex] ?? INTRO_STORY_SEQUENCE.beats[0];
   const ropeBudget = ROPE_BREAK_TIME_SECONDS + saveData.upgrades.ropeLength * 0.5 + saveData.upgrades.grip * 0.35;
   const ropeStabilityRatio = clamp(ropeBudget > 0 ? currentPlayer.ropeTimer / ropeBudget : 0, 0, 1);
@@ -9069,6 +9582,10 @@ export default function App() {
         <LandingScreen
           hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
           highestUnlockedLevel={highestUnlockedLevel}
+          campaignChallenge={campaignChallenge}
+          featuredRouteCup={featuredRouteCup}
+          currentStreak={runConsistency.current}
+          bestStreak={runConsistency.best}
           landingChallenge={
             incomingLandingChallenge
               ? {
@@ -9081,6 +9598,7 @@ export default function App() {
           }
           onAcceptChallenge={incomingRouteChallenge ? () => acceptSharedRouteChallenge(incomingRouteChallenge.levelId) : null}
           onPlay={handleLandingPlay}
+          onOpenLeaderboard={openLeaderboardScreen}
           onOpenStory={openStoryMap}
         />
       )}
@@ -9093,6 +9611,7 @@ export default function App() {
             beatCount={INTRO_STORY_SEQUENCE.beats.length}
             regionLabel={MAP_REGION_LOOKUP.get(currentStoryBeat.regionId)?.label ?? null}
             onNext={handleStoryNext}
+            onPrevious={handleStoryPrevious}
             onSkip={handleStorySkip}
             onReturnToMenu={returnToMainMenu}
           />
@@ -9107,7 +9626,7 @@ export default function App() {
                   <div className="rounded-2xl border border-emerald-300/20 bg-slate-950/55 backdrop-blur-md px-5 py-4 shadow-2xl shadow-black/30">
                       <div className="text-[11px] uppercase tracking-[0.3em] text-emerald-200/70 mb-2">Run Telemetry</div>
                       <h1 className="text-4xl font-black drop-shadow-md text-amber-300 flex items-center gap-2">
-                           <Map size={32}/> {distance}m / {LEVELS[selectedLevelRef.current-1].targetDistance}m
+                           <MapIcon size={32}/> {distance}m / {LEVELS[selectedLevelRef.current-1].targetDistance}m
                       </h1>
                       <div className="text-2xl mt-3 flex items-center gap-2 text-emerald-300">
                           <Coins size={24}/> {runTokens}
@@ -9176,89 +9695,111 @@ export default function App() {
                             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-300"><Wind size={16}/> Weather</div>
                             <div className="font-bold text-sky-300 text-lg">{((currentBiome === 'JUNGLE' || currentBiome === 'SWAMP') && (weather.type === 'RAIN' || weather.type === 'WINDY')) ? 'MONSOON' : weather.type}</div>
                         </div>
-                       {activeFeaturedRoutePressure && (
-                           <div className={`min-w-[220px] rounded-2xl border ${featuredRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
-                               <div className="flex items-center justify-between gap-3">
-                                   <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">Daily Crew Cup</div>
-                                   <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
-                                       {previewLevel.name}
-                                   </div>
+                       <button
+                         type="button"
+                         onClick={() => setIsRunHudDetailsOpen((current) => !current)}
+                         className="min-w-[168px] rounded-2xl border border-cyan-200/15 bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20 transition-colors hover:bg-slate-900/70"
+                       >
+                           <div className="flex items-center justify-between gap-3">
+                               <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">Route Briefing</div>
+                               <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                                   {isRunHudDetailsOpen ? 'Hide' : 'Show'}
                                </div>
-                               <div className="mt-1 text-base font-black text-white">{activeFeaturedRoutePressure.title}</div>
-                               <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeFeaturedRoutePressure.detail}</div>
-                               <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
-                                   <span>{activeFeaturedRoutePressure.statusLabel}</span>
-                                   <span>{activeFeaturedRoutePressure.countdownLabel}</span>
-                               </div>
-                               {activeFeaturedRoutePressure.targetScore ? (
-                                   <>
-                                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
-                                           <div
-                                               className={`h-full transition-all ${activeFeaturedRoutePressure.tone === 'rose'
-                                                   ? 'bg-rose-400'
-                                                   : activeFeaturedRoutePressure.tone === 'cyan'
-                                                       ? 'bg-cyan-300'
-                                                       : activeFeaturedRoutePressure.tone === 'amber'
-                                                           ? 'bg-amber-300'
-                                                           : 'bg-emerald-400'
-                                               }`}
-                                               style={{ width: `${activeFeaturedRoutePressure.progressPercent}%` }}
-                                           />
-                                       </div>
-                                       <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
-                                           <span>{activeFeaturedRoutePressure.targetLabel}</span>
-                                           <span>
-                                               {activeFeaturedRoutePressure.gapScore !== null
-                                                   ? activeFeaturedRoutePressure.gapScore >= 0
-                                                       ? `+${activeFeaturedRoutePressure.gapScore}`
-                                                       : `${activeFeaturedRoutePressure.gapScore}`
-                                                   : '--'}
-                                           </span>
-                                       </div>
-                                   </>
-                               ) : null}
                            </div>
-                       )}
-                       {activeRoutePressure && (
-                           <div className={`min-w-[220px] rounded-2xl border ${activeRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
-                               <div className="flex items-center justify-between gap-3">
-                                   <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">{activeRoutePressure.label}</div>
-                                   <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
-                                       {previewLevel.name}
-                                   </div>
-                               </div>
-                               <div className="mt-1 text-base font-black text-white">{activeRoutePressure.title}</div>
-                               <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeRoutePressure.detail}</div>
-                               {activeRoutePressure.targetScore ? (
-                                   <>
-                                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
-                                           <div
-                                               className={`h-full transition-all ${
-                                                   activeRoutePressure.tone === 'rose'
-                                                       ? 'bg-rose-400'
-                                                       : activeRoutePressure.tone === 'cyan'
-                                                           ? 'bg-cyan-300'
-                                                           : activeRoutePressure.tone === 'amber'
-                                                               ? 'bg-amber-300'
-                                                               : 'bg-emerald-400'
-                                               }`}
-                                               style={{ width: `${activeRoutePressure.progressPercent}%` }}
-                                           />
-                                       </div>
-                                       <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
-                                           <span>Target {activeRoutePressure.targetScore}</span>
-                                           <span>
-                                               {activeRoutePressure.gapScore !== null
-                                                   ? activeRoutePressure.gapScore >= 0
-                                                       ? `+${activeRoutePressure.gapScore}`
-                                                       : `${activeRoutePressure.gapScore}`
-                                                   : '--'}
-                                           </span>
-                                       </div>
-                                   </>
-                               ) : null}
+                           <div className="mt-1 text-base font-black text-white">
+                               {activeFeaturedRoutePressure?.title ?? activeRoutePressure?.title ?? 'Keep the line clear'}
                            </div>
-                       )}
+                           <div className="mt-1 text-[11px] leading-relaxed text-white/75">
+                               {activeFeaturedRoutePressure?.detail ?? activeRoutePressure?.detail ?? 'Tap for the daily crew cup and opening benchmark.'}
+                           </div>
+                       </button>
+                       {isRunHudDetailsOpen ? (
+                           <div className="flex flex-col gap-2">
+                               {activeFeaturedRoutePressure && (
+                                   <div className={`min-w-[220px] rounded-2xl border ${featuredRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
+                                       <div className="flex items-center justify-between gap-3">
+                                           <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">Daily Crew Cup</div>
+                                           <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                                               {previewLevel.name}
+                                           </div>
+                                       </div>
+                                       <div className="mt-1 text-base font-black text-white">{activeFeaturedRoutePressure.title}</div>
+                                       <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeFeaturedRoutePressure.detail}</div>
+                                       <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                           <span>{activeFeaturedRoutePressure.statusLabel}</span>
+                                           <span>{activeFeaturedRoutePressure.countdownLabel}</span>
+                                       </div>
+                                       {activeFeaturedRoutePressure.targetScore ? (
+                                           <>
+                                               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
+                                                   <div
+                                                       className={`h-full transition-all ${activeFeaturedRoutePressure.tone === 'rose'
+                                                           ? 'bg-rose-400'
+                                                           : activeFeaturedRoutePressure.tone === 'cyan'
+                                                               ? 'bg-cyan-300'
+                                                               : activeFeaturedRoutePressure.tone === 'amber'
+                                                                   ? 'bg-amber-300'
+                                                                   : 'bg-emerald-400'
+                                                       }`}
+                                                       style={{ width: `${activeFeaturedRoutePressure.progressPercent}%` }}
+                                                   />
+                                               </div>
+                                               <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                                   <span>{activeFeaturedRoutePressure.targetLabel}</span>
+                                                   <span>
+                                                       {activeFeaturedRoutePressure.gapScore !== null
+                                                           ? activeFeaturedRoutePressure.gapScore >= 0
+                                                               ? `+${activeFeaturedRoutePressure.gapScore}`
+                                                               : `${activeFeaturedRoutePressure.gapScore}`
+                                                           : '--'}
+                                                   </span>
+                                               </div>
+                                           </>
+                                       ) : null}
+                                   </div>
+                               )}
+                               {activeRoutePressure && (
+                                   <div className={`min-w-[220px] rounded-2xl border ${activeRoutePressureTone} bg-slate-950/62 backdrop-blur-md p-3 text-right shadow-2xl shadow-black/20`}>
+                                       <div className="flex items-center justify-between gap-3">
+                                           <div className="text-[11px] uppercase tracking-[0.24em] text-white/60">{activeRoutePressure.label}</div>
+                                           <div className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
+                                               {previewLevel.name}
+                                           </div>
+                                       </div>
+                                       <div className="mt-1 text-base font-black text-white">{activeRoutePressure.title}</div>
+                                       <div className="mt-1 text-[11px] leading-relaxed text-white/75">{activeRoutePressure.detail}</div>
+                                       {activeRoutePressure.targetScore ? (
+                                           <>
+                                               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
+                                                   <div
+                                                       className={`h-full transition-all ${
+                                                           activeRoutePressure.tone === 'rose'
+                                                               ? 'bg-rose-400'
+                                                               : activeRoutePressure.tone === 'cyan'
+                                                                   ? 'bg-cyan-300'
+                                                                   : activeRoutePressure.tone === 'amber'
+                                                                       ? 'bg-amber-300'
+                                                                       : 'bg-emerald-400'
+                                                       }`}
+                                                       style={{ width: `${activeRoutePressure.progressPercent}%` }}
+                                                   />
+                                               </div>
+                                               <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                                                   <span>Target {activeRoutePressure.targetScore}</span>
+                                                   <span>
+                                                       {activeRoutePressure.gapScore !== null
+                                                           ? activeRoutePressure.gapScore >= 0
+                                                               ? `+${activeRoutePressure.gapScore}`
+                                                               : `${activeRoutePressure.gapScore}`
+                                                           : '--'}
+                                                   </span>
+                                               </div>
+                                           </>
+                                       ) : null}
+                                   </div>
+                               )}
+                           </div>
+                       ) : null}
                        
                        {/* SKILL CHAIN */}
                        {skillChainUI.active && (
@@ -9294,133 +9835,6 @@ export default function App() {
                           </div>
                           <p className="text-lg text-white font-bold leading-relaxed">{tutorial.message}</p>
                           <div className="mt-3 text-xs text-gray-400">Follow the lane and keep the route moving. Press H to show tips again.</div>
-                      </div>
-                  </div>
-              )}
-
-              {runIntroBannerTimerRef.current > 0 && runIntroBanner && (
-                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-center px-6">
-                      <div className="w-full max-w-4xl overflow-hidden rounded-[1.9rem] border border-white/15 bg-slate-950/86 shadow-2xl shadow-black/45 backdrop-blur-md">
-                          <div className="grid items-stretch gap-0 lg:grid-cols-[minmax(0,1.05fr),minmax(320px,0.95fr)]">
-                              <div className="relative overflow-hidden border-b border-white/10 lg:border-b-0 lg:border-r">
-                                  <svg className="h-full min-h-[280px] w-full" viewBox="0 0 640 360" aria-hidden="true" role="presentation">
-                                      <defs>
-                                          <linearGradient id="run-intro-sky" x1="0" y1="0" x2="0" y2="1">
-                                              <stop offset="0%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].skyFrom} />
-                                              <stop offset="100%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].skyTo} />
-                                          </linearGradient>
-                                          <radialGradient id="run-intro-glow" cx="54%" cy="28%" r="48%">
-                                              <stop offset="0%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].glow} stopOpacity="0.92" />
-                                              <stop offset="100%" stopColor={STORY_SCENE_PALETTE[runIntroBanner.scene].glow} stopOpacity="0" />
-                                          </radialGradient>
-                                      </defs>
-                                      <rect x="0" y="0" width="640" height="360" fill="url(#run-intro-sky)" />
-                                      <ellipse cx="340" cy="98" rx="176" ry="94" fill="url(#run-intro-glow)">
-                                          <animate attributeName="ry" values="90;104;90" dur="4s" repeatCount="indefinite" />
-                                      </ellipse>
-                                      <path d="M0 254C88 214 162 208 234 238C304 268 384 276 470 240C530 214 582 214 640 242V360H0Z" fill={STORY_SCENE_PALETTE[runIntroBanner.scene].ridge} opacity="0.94" />
-                                      <path d="M0 300C104 276 194 274 286 294C372 312 462 320 548 300C582 292 612 292 640 300V360H0Z" fill="#09111f" opacity="0.86" />
-                                      <path d="M124 92L132 292" stroke="#1f2937" strokeWidth="18" strokeLinecap="round" />
-                                      <path d="M132 128C164 120 194 106 220 82" stroke="#27473a" strokeWidth="12" strokeLinecap="round" />
-                                      <path d="M520 102L510 300" stroke="#1f2937" strokeWidth="18" strokeLinecap="round" />
-                                      <path d="M510 138C470 130 430 114 392 84" stroke="#263646" strokeWidth="12" strokeLinecap="round" />
-                                      <path d="M176 104C246 114 302 158 344 214" fill="none" stroke={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} strokeWidth="5.5" strokeLinecap="round" strokeDasharray="10 10">
-                                          <animate attributeName="stroke-dashoffset" values="0;-80" dur="2.8s" repeatCount="indefinite" />
-                                      </path>
-                                      <g transform="translate(0 0)">
-                                          <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="3s" repeatCount="indefinite" />
-                                          <path d="M350 218C366 194 382 186 400 189C418 192 434 204 444 226C414 242 382 250 352 248C350 240 350 228 350 218Z" fill="#0b1020" />
-                                          <circle cx="384" cy="174" r="23" fill="#0b1020" />
-                                          <circle cx="394" cy="167" r="6" fill={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} />
-                                          <path d="M372 196L362 248" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
-                                          <path d="M396 198L430 244" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
-                                          <path d="M352 220L304 236" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
-                                          <path d="M432 222L474 188" stroke="#0b1020" strokeWidth="10" strokeLinecap="round" />
-                                          <path d="M474 188L510 144" stroke={STORY_SCENE_PALETTE[runIntroBanner.scene].accent} strokeWidth="6" strokeLinecap="round" />
-                                      </g>
-                                  </svg>
-                                  <div className="absolute left-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-100">
-                                      {runIntroBanner.kicker}
-                                  </div>
-                                  <div className="absolute right-5 top-5 rounded-full border border-white/15 bg-slate-950/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/82">
-                                      {runIntroBanner.speaker}
-                                  </div>
-                                  {(runIntroBanner.characterId || runIntroBanner.supportCharacterId) ? (
-                                      <div className="absolute bottom-5 right-5 flex items-end -space-x-3">
-                                          {runIntroBanner.supportCharacterId ? (
-                                              <StoryCastPortrait
-                                                  characterId={runIntroBanner.supportCharacterId}
-                                                  scene={runIntroBanner.scene}
-                                                  size={56}
-                                                  priority="support"
-                                                  className="mb-5"
-                                              />
-                                          ) : null}
-                                          {runIntroBanner.characterId ? (
-                                              <StoryCastPortrait
-                                                  characterId={runIntroBanner.characterId}
-                                                  scene={runIntroBanner.scene}
-                                                  size={72}
-                                                  priority="primary"
-                                              />
-                                          ) : null}
-                                      </div>
-                                  ) : null}
-                                  <div className="absolute bottom-5 left-5 max-w-[82%] rounded-[1.1rem] border border-white/15 bg-slate-950/80 px-4 py-3 shadow-2xl shadow-black/40">
-                                      <div className="text-[10px] font-black uppercase tracking-[0.28em] text-white/45">{runIntroBanner.accentWord}</div>
-                                      <div className="mt-1 text-sm font-semibold leading-relaxed text-white">{runIntroBanner.caption}</div>
-                                  </div>
-                              </div>
-
-                              <div className="flex flex-col justify-center px-6 py-5 lg:px-7">
-                                  <div className="atlas-map-label text-[11px] uppercase tracking-[0.34em] text-emerald-200/70">Route Briefing</div>
-                                  <div className="atlas-title mt-2 text-4xl text-white">{runIntroBanner.title}</div>
-                                  <div className="atlas-panel-copy mt-3 text-base leading-relaxed text-slate-300">{runIntroBanner.subtitle}</div>
-
-                                  {runIntroBanner.characterId ? (
-                                      <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3">
-                                          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-white/45">Crew lead</div>
-                                          <div className="mt-3 flex flex-wrap gap-3">
-                                              <StoryCastPortrait
-                                                  characterId={runIntroBanner.characterId}
-                                                  scene={runIntroBanner.scene}
-                                                  size={64}
-                                                  showLabel
-                                              />
-                                              {runIntroBanner.supportCharacterId ? (
-                                                  <StoryCastPortrait
-                                                      characterId={runIntroBanner.supportCharacterId}
-                                                      scene={runIntroBanner.scene}
-                                                      size={56}
-                                                      showLabel
-                                                  />
-                                              ) : null}
-                                          </div>
-                                          {getStoryCharacterProfile(runIntroBanner.characterId) ? (
-                                              <div className="mt-3 text-sm leading-relaxed text-slate-300">
-                                                  {getStoryCharacterProfile(runIntroBanner.characterId)?.shortBio}
-                                              </div>
-                                          ) : null}
-                                      </div>
-                                  ) : null}
-
-                                  <div className="mt-5 rounded-[1.2rem] border border-emerald-200/15 bg-emerald-500/10 px-4 py-3">
-                                      <div className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-100/75">Mission</div>
-                                      <div className="mt-1 text-lg font-black text-white">{runIntroBanner.missionTitle}</div>
-                                      <div className="mt-1 text-sm leading-relaxed text-emerald-50/85">{runIntroBanner.missionDetail}</div>
-                                  </div>
-
-                                  <div className="mt-3 rounded-[1.2rem] border border-cyan-200/15 bg-cyan-500/10 px-4 py-3">
-                                      <div className="flex items-center justify-between gap-3">
-                                          <div className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-100/80">Rival Pressure</div>
-                                          <div className="rounded-full border border-cyan-200/20 bg-slate-950/55 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-100">
-                                              {runIntroBanner.rivalStatus}
-                                          </div>
-                                      </div>
-                                      <div className="mt-2 text-sm leading-relaxed text-slate-200">{runIntroBanner.rivalDetail}</div>
-                                  </div>
-                              </div>
-                          </div>
                       </div>
                   </div>
               )}
@@ -9550,7 +9964,7 @@ export default function App() {
                       </div>
                   </div>
                   <div className="mt-6 flex flex-wrap gap-3">
-                      <button onClick={() => startGame(selectedLevelRef.current)} className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold tracking-[0.24em] transition-colors hover:bg-slate-800">
+                      <button onClick={() => queueGameLaunch(selectedLevelRef.current)} className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold tracking-[0.24em] transition-colors hover:bg-slate-800">
                           RESTART LEVEL
                       </button>
                       <button onClick={returnToMainMenu} className="rounded-xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold tracking-[0.24em] transition-colors hover:bg-slate-800">
@@ -9567,122 +9981,174 @@ export default function App() {
       {/* MENU UI OVERLAY */}
       {gameState === GameState.MENU && (
         <>
-          <ProgressSidebar
-            levels={LEVELS}
-            levelResults={saveData.levelResults}
-            highestUnlockedLevel={highestUnlockedLevel}
-            selectedLevelId={selectedLevelId ?? 1}
-            runHistory={saveData.runHistory}
-            communityRunHistory={communityBoardEntries}
-            achievements={menuAchievements}
-            currentStreak={runConsistency.current}
-            bestStreak={runConsistency.best}
-            campaignChallenge={campaignChallenge}
-            featuredRouteCup={featuredRouteCup}
-            onOpenLeaderboard={openLeaderboardScreen}
-            onShareRunboard={shareRunboard}
-            leaderboardRemoteSource={leaderboardRemoteSource}
-            leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
-            onRefreshCommunityBoard={() => {
-                void refreshCommunityBoardFromRemoteSource(true);
-            }}
-            onShareRouteChallenge={(levelId) => {
-              clearRecommendationTrace();
-              void shareRouteChallenge(levelId);
-            }}
-            onCopyRouteChallenge={copyRouteChallengeText}
-            onSelectLevel={(levelId) => {
-              handleSelectLevel(levelId, { focus: true });
-              setSelectedLevelId(levelId);
-              selectedLevelRef.current = levelId;
-            }}
-          />
-          <ProgressSidebar
-            levels={LEVELS}
-            levelResults={saveData.levelResults}
-            highestUnlockedLevel={highestUnlockedLevel}
-            selectedLevelId={selectedLevelId ?? 1}
-            runHistory={saveData.runHistory}
-            communityRunHistory={communityBoardEntries}
-            achievements={menuAchievements}
-            currentStreak={runConsistency.current}
-            bestStreak={runConsistency.best}
-            campaignChallenge={campaignChallenge}
-            featuredRouteCup={featuredRouteCup}
-            variant="drawer"
-            isOpen={isProgressDrawerOpen}
-            onClose={() => setIsProgressDrawerOpen(false)}
-            onOpenLeaderboard={openLeaderboardScreen}
-            onShareRunboard={shareRunboard}
-            leaderboardRemoteSource={leaderboardRemoteSource}
-            leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
-            onRefreshCommunityBoard={() => {
-                void refreshCommunityBoardFromRemoteSource(true);
-            }}
-            onShareRouteChallenge={(levelId) => {
-              clearRecommendationTrace();
-              void shareRouteChallenge(levelId);
-            }}
-            onCopyRouteChallenge={copyRouteChallengeText}
-            onSelectLevel={(levelId) => {
-              handleSelectLevel(levelId, { focus: true });
-              setSelectedLevelId(levelId);
-              selectedLevelRef.current = levelId;
-            }}
-          />
-          <Suspense fallback={<SurfaceLoader label="Loading route map" />}>
-            <MenuScreen
-              saveData={saveData}
-              selectedLevel={selectedLevel}
-              selectedLevelResult={selectedLevelResult}
-              selectedLevelLocked={selectedLevelLocked}
-              highestUnlockedLevel={highestUnlockedLevel}
-              challengeRouteId={incomingRouteChallenge?.levelId ?? null}
-              challengeAlias={incomingRouteChallenge?.challengerAlias ?? null}
-              communityRunHistory={communityBoardEntries}
-              hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
-              isMuted={isMuted}
-              isFullscreen={isFullscreen}
-              currentBuild={currentBuildSummary}
-              weatherLabels={WEATHER_LABELS}
-              enemyLabels={ENEMY_LABELS}
-              onStartGame={() => {
-                if (selectedLevel) startGame(selectedLevel.id);
-                if (selectedLevel && incomingRouteChallenge?.levelId === selectedLevel.id) {
-                    setIncomingRouteChallenge(null);
-                }
-              }}
-              featuredRouteCup={featuredRouteCup}
-              onOpenShop={() => openShopScreen()}
-              onOpenLeaderboard={openLeaderboardScreen}
-              onOpenStory={openStoryMap}
-              onOpenProgressDrawer={() => setIsProgressDrawerOpen(true)}
-              onOpenSettings={() => openSettings()}
-              campaignChallenge={campaignChallenge}
-              onFocusChallengeLevel={(levelId) => {
+          {!launchIntro ? (
+            <>
+              <ProgressSidebar
+                levels={LEVELS}
+                levelResults={saveData.levelResults}
+                highestUnlockedLevel={highestUnlockedLevel}
+                selectedLevelId={selectedLevelId ?? 1}
+                runHistory={saveData.runHistory}
+                communityRunHistory={communityBoardEntries}
+                achievements={menuAchievements}
+                currentStreak={runConsistency.current}
+                bestStreak={runConsistency.best}
+                campaignChallenge={campaignChallenge}
+                featuredRouteCup={featuredRouteCup}
+                onOpenLeaderboard={openLeaderboardScreen}
+                onShareRunboard={shareRunboard}
+                onOpenShop={() => openShopScreen()}
+                onOpenStory={openStoryMap}
+                onOpenSettings={() => openSettings()}
+                onToggleMute={toggleMute}
+                onToggleFullscreen={toggleFullscreen}
+                onPreviousRoute={() => stepSelectedRoute(-1)}
+                onNextRoute={() => stepSelectedRoute(1)}
+                onCenterSelected={() => {
+                  handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                }}
+                onZoomIn={() => adjustMenuZoom(0.045)}
+                onZoomOut={() => adjustMenuZoom(-0.045)}
+                onResetView={resetMenuView}
+                leaderboardRemoteSource={leaderboardRemoteSource}
+                leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
+                isCollapsed={isProgressSidebarCollapsed}
+                onToggleCollapsed={() => setIsProgressSidebarCollapsed((current) => !current)}
+                isMuted={isMuted}
+                isFullscreen={isFullscreen}
+                isAtlasFocusMode={isAtlasFocusMode}
+                onRefreshCommunityBoard={() => {
+                    void refreshCommunityBoardFromRemoteSource(true);
+                }}
+                onShareRouteChallenge={(levelId) => {
+                  clearRecommendationTrace();
+                  void shareRouteChallenge(levelId);
+                }}
+                onCopyRouteChallenge={copyRouteChallengeText}
+                onSelectLevel={(levelId) => {
                   handleSelectLevel(levelId, { focus: true });
                   setSelectedLevelId(levelId);
                   selectedLevelRef.current = levelId;
-              }}
-              onAcceptChallenge={incomingRouteChallenge ? acceptSharedRouteChallenge : undefined}
-              onFocusFeaturedRoute={(levelId) => {
+                }}
+              />
+              <ProgressSidebar
+                levels={LEVELS}
+                levelResults={saveData.levelResults}
+                highestUnlockedLevel={highestUnlockedLevel}
+                selectedLevelId={selectedLevelId ?? 1}
+                runHistory={saveData.runHistory}
+                communityRunHistory={communityBoardEntries}
+                achievements={menuAchievements}
+                currentStreak={runConsistency.current}
+                bestStreak={runConsistency.best}
+                campaignChallenge={campaignChallenge}
+                featuredRouteCup={featuredRouteCup}
+                variant="drawer"
+                isOpen={isProgressDrawerOpen}
+                onClose={() => setIsProgressDrawerOpen(false)}
+                onOpenLeaderboard={openLeaderboardScreen}
+                onShareRunboard={shareRunboard}
+                onOpenShop={() => openShopScreen()}
+                onOpenStory={openStoryMap}
+                onOpenSettings={() => openSettings()}
+                onToggleMute={toggleMute}
+                onToggleFullscreen={toggleFullscreen}
+                onPreviousRoute={() => stepSelectedRoute(-1)}
+                onNextRoute={() => stepSelectedRoute(1)}
+                onCenterSelected={() => {
+                  handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                }}
+                onZoomIn={() => adjustMenuZoom(0.045)}
+                onZoomOut={() => adjustMenuZoom(-0.045)}
+                onResetView={resetMenuView}
+                leaderboardRemoteSource={leaderboardRemoteSource}
+                leaderboardRemoteSyncAt={leaderboardRemoteSyncAt}
+                isMuted={isMuted}
+                isFullscreen={isFullscreen}
+                isAtlasFocusMode={isAtlasFocusMode}
+                onRefreshCommunityBoard={() => {
+                    void refreshCommunityBoardFromRemoteSource(true);
+                }}
+                onShareRouteChallenge={(levelId) => {
+                  clearRecommendationTrace();
+                  void shareRouteChallenge(levelId);
+                }}
+                onCopyRouteChallenge={copyRouteChallengeText}
+                onSelectLevel={(levelId) => {
                   handleSelectLevel(levelId, { focus: true });
                   setSelectedLevelId(levelId);
                   selectedLevelRef.current = levelId;
-              }}
-              onToggleMute={toggleMute}
-              onToggleFullscreen={toggleFullscreen}
-              onShareRunboard={shareRunboard}
-              onCenterSelected={() => {
-                  if (selectedLevelRef.current !== null) {
-                      handleSelectLevel(selectedLevelRef.current, { focus: true });
-                  }
-              }}
-              onZoomIn={() => adjustMenuZoom(0.045)}
-              onZoomOut={() => adjustMenuZoom(-0.045)}
-              onResetView={resetMenuView}
+                }}
+              />
+              <Suspense fallback={<SurfaceLoader label="Loading route map" />}>
+                <MenuScreen
+                  saveData={saveData}
+                  selectedLevel={selectedLevel}
+                  selectedLevelResult={selectedLevelResult}
+                  selectedLevelLocked={selectedLevelLocked}
+                  highestUnlockedLevel={highestUnlockedLevel}
+                  challengeRouteId={incomingRouteChallenge?.levelId ?? null}
+                  challengeAlias={incomingRouteChallenge?.challengerAlias ?? null}
+                  communityRunHistory={communityBoardEntries}
+                  hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
+                  isMuted={isMuted}
+                  isFullscreen={isFullscreen}
+                  isAtlasFocusMode={isAtlasFocusMode}
+                  currentBuild={currentBuildSummary}
+                  weatherLabels={WEATHER_LABELS}
+                  enemyLabels={ENEMY_LABELS}
+                  onStartGame={() => {
+                    if (selectedLevel) {
+                      queueGameLaunch(selectedLevel.id);
+                      if (incomingRouteChallenge?.levelId === selectedLevel.id) {
+                          setIncomingRouteChallenge(null);
+                      }
+                    }
+                  }}
+                  featuredRouteCup={featuredRouteCup}
+                  onOpenShop={() => openShopScreen()}
+                  onOpenLeaderboard={openLeaderboardScreen}
+                  onOpenStory={openStoryMap}
+                  onOpenProgressDrawer={() => setIsProgressDrawerOpen(true)}
+                  onOpenSettings={() => openSettings()}
+                  campaignChallenge={campaignChallenge}
+                  onToggleAtlasFocusMode={() => setIsAtlasFocusMode((current) => !current)}
+                  onFocusChallengeLevel={(levelId) => {
+                      handleSelectLevel(levelId, { focus: true });
+                      setSelectedLevelId(levelId);
+                      selectedLevelRef.current = levelId;
+                  }}
+                  onAcceptChallenge={incomingRouteChallenge ? acceptSharedRouteChallenge : undefined}
+                  onFocusFeaturedRoute={(levelId) => {
+                      handleSelectLevel(levelId, { focus: true });
+                      setSelectedLevelId(levelId);
+                      selectedLevelRef.current = levelId;
+                  }}
+                  onToggleMute={toggleMute}
+                  onToggleFullscreen={toggleFullscreen}
+                  onShareRunboard={shareRunboard}
+                  onCenterSelected={() => {
+                      handleSelectLevel(selectedLevelId ?? Math.max(1, highestUnlockedLevel), { focus: true });
+                  }}
+                  onPreviousRoute={() => stepSelectedRoute(-1)}
+                  onNextRoute={() => stepSelectedRoute(1)}
+                  onZoomIn={() => adjustMenuZoom(0.045)}
+                  onZoomOut={() => adjustMenuZoom(-0.045)}
+                  onResetView={resetMenuView}
+                  onOpenBuildEntry={openShopForBuildEntry}
+                  compassAngleDeg={atlasCompassAngleDeg}
+                />
+              </Suspense>
+            </>
+          ) : null}
+          {launchIntro ? (
+            <LaunchIntroOverlay
+              intro={launchIntro}
+              currentTimeMs={launchIntroClockMs}
+              compassAngleDeg={atlasCompassAngleDeg}
+              onSkip={() => launchQueuedGame(launchIntro.levelId)}
             />
-          </Suspense>
+          ) : null}
         </>
       )}
 
@@ -9739,6 +10205,7 @@ export default function App() {
             shopItems={SHOP_ITEMS}
             currentBuild={currentBuildSummary}
             purchaseReceipt={purchaseReceipt}
+            onGrantTestWallet={grantTestWallet}
             onClose={() => {
               clearRecommendationTrace();
               setRecommendedShopItemId(null);
@@ -9786,11 +10253,11 @@ export default function App() {
             runFeaturedCupOutcome={runFeaturedRouteCupResult}
             onRetry={() => {
               clearRecommendationTrace();
-              startGame(selectedLevelRef.current);
+              queueGameLaunch(selectedLevelRef.current);
             }}
             onNextLevel={() => {
               clearRecommendationTrace();
-              startGame(selectedLevelRef.current + 1);
+              queueGameLaunch(selectedLevelRef.current + 1);
             }}
             onOpenLeaderboard={() => {
               clearRecommendationTrace();

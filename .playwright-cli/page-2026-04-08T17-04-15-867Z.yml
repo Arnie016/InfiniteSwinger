@@ -1,0 +1,64 @@
+- dialog "Camp Wakes First" [ref=e130]:
+  - generic:
+    - img
+  - generic [ref=e131]:
+    - banner [ref=e132]:
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - img [ref=e136]
+            - text: Story Map
+          - generic [ref=e138]: Beat 1/7
+          - generic [ref=e139]:
+            - img [ref=e140]
+            - text: FRAME 01
+        - generic [ref=e141]:
+          - button "Show details" [ref=e142] [cursor=pointer]:
+            - img [ref=e143]
+            - text: Show details
+          - generic [ref=e145]:
+            - img [ref=e146]
+            - text: Comic Motion
+      - generic [ref=e147]:
+        - generic [ref=e148]: Issue 01
+        - heading "Camp Wakes First" [level=2] [ref=e149]
+    - generic [ref=e151]:
+      - generic [ref=e152]:
+        - img [ref=e153]
+        - generic:
+          - generic: Scout
+          - generic: Scout Nara
+        - generic:
+          - generic: Panel Caption
+          - generic: Push the camp deeper before the ash reaches the roots.
+      - generic [ref=e178]:
+        - generic [ref=e179]:
+          - generic [ref=e180]: Focus caption
+          - generic [ref=e181]: Outer Canopy Camp
+        - generic [ref=e182]:
+          - paragraph [ref=e183]: The camp hears the magma core before it sees it.
+          - paragraph [ref=e184]: The canopy is still safe here, but only barely.
+        - generic [ref=e185]: Level 1 is the first scouting swing.
+    - contentinfo [ref=e186]:
+      - generic [ref=e187]:
+        - generic [ref=e188]:
+          - generic [ref=e189]: ← Back
+          - generic [ref=e190]: Enter / → Next
+          - generic [ref=e191]: Esc Skip
+          - generic [ref=e192]: M Menu
+        - generic [ref=e193]:
+          - button "Skip" [ref=e194] [cursor=pointer]:
+            - generic [ref=e195]:
+              - text: Skip
+              - img [ref=e196]
+          - button "Main Menu" [ref=e198] [cursor=pointer]:
+            - generic [ref=e199]:
+              - img [ref=e200]
+              - text: Main Menu
+        - button "Next panel" [active] [ref=e203] [cursor=pointer]:
+          - generic [ref=e204]:
+            - text: Next panel
+            - img [ref=e205]
+      - generic [ref=e207]:
+        - generic [ref=e208]: Frame 1
+        - generic [ref=e217]: "Next: beat 2"

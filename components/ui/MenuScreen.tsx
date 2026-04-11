@@ -2,8 +2,12 @@ import React from 'react';
 import {
   Anchor,
   BookOpen,
+  Eye,
   CheckCircle2,
+  Compass,
   Coins,
+  ChevronLeft,
+  ChevronRight,
   Feather,
   Flame,
   Gauge,
@@ -127,6 +131,8 @@ const ropeTypeGlyphs = {
   braid: Link2,
   chain: Anchor,
   silk: Feather,
+  reed: Waves,
+  ember: Flame,
 } as const;
 
 const threatTone: Record<Enemy['enemyType'], string> = {
@@ -557,6 +563,76 @@ function LevelDots({
   );
 }
 
+function getCompassHeading(angleDeg: number) {
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const normalized = ((angleDeg % 360) + 360) % 360;
+  const index = Math.round(normalized / 45) % directions.length;
+  return directions[index];
+}
+
+function AtlasCompass({ angleDeg }: { angleDeg: number }) {
+  const normalized = ((angleDeg % 360) + 360) % 360;
+  const heading = getCompassHeading(angleDeg);
+
+  return (
+    <div data-ui-control className="pointer-events-none absolute bottom-4 right-4 z-20 hidden text-white lg:block">
+      <div className="atlas-panel-glow atlas-compass-card pointer-events-auto rounded-[1.8rem] border border-amber-200/14 bg-[linear-gradient(180deg,rgba(17,24,39,0.84),rgba(7,13,18,0.92))] px-4 py-3.5 shadow-[0_24px_56px_rgba(2,6,23,0.42)] backdrop-blur-xl">
+        <div className="flex items-center gap-4">
+          <div className="relative h-24 w-24 shrink-0 rounded-full border border-amber-100/15 bg-[radial-gradient(circle_at_50%_38%,rgba(124,92,45,0.92),rgba(31,24,16,0.96)_52%,rgba(9,12,18,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_24px_rgba(0,0,0,0.32)]">
+            <div className="absolute inset-[6px] rounded-full border border-amber-100/14 bg-[radial-gradient(circle_at_50%_35%,rgba(112,78,34,0.55),rgba(26,21,15,0.96))]" />
+            <div className="atlas-compass-ring absolute inset-[13px] rounded-full border border-amber-100/10" />
+            {Array.from({ length: 16 }).map((_, index) => {
+              const isCardinal = index % 4 === 0;
+              return (
+                <span
+                  key={`compass-tick-${index}`}
+                  className="absolute left-1/2 top-1/2"
+                  style={{ transform: `translate(-50%, -50%) rotate(${index * 22.5}deg)` }}
+                >
+                  <span
+                    className={`absolute left-1/2 top-[8px] block -translate-x-1/2 rounded-full ${
+                      isCardinal ? 'h-4 w-[2px] bg-amber-50/70' : 'h-2.5 w-px bg-white/28'
+                    }`}
+                  />
+                </span>
+              );
+            })}
+            <span className="absolute left-1/2 top-1.5 -translate-x-1/2 text-[9px] font-black uppercase tracking-[0.28em] text-amber-50/88">N</span>
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">E</span>
+            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">S</span>
+            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-[0.22em] text-amber-100/42">W</span>
+            <div className="atlas-compass-glow absolute inset-[18px] rounded-full" />
+            <div
+              className="atlas-compass-needle absolute left-1/2 top-1/2 h-[66px] w-[18px]"
+              style={{ transform: `translate(-50%, -50%) rotate(${angleDeg}deg)` }}
+            >
+              <span className="absolute left-1/2 top-0 h-0 w-0 -translate-x-1/2 border-x-[7px] border-x-transparent border-b-[30px] border-b-emerald-100" />
+              <span className="absolute left-1/2 top-[22px] h-6 w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-100 via-cyan-200 to-amber-200/10" />
+              <span className="absolute left-1/2 bottom-0 h-0 w-0 -translate-x-1/2 border-x-[6px] border-x-transparent border-t-[20px] border-t-amber-900/90" />
+            </div>
+            <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-100/30 bg-slate-950 shadow-[0_0_16px_rgba(250,204,21,0.14)]" />
+            <div className="absolute left-1/2 top-[18px] h-2 w-2 -translate-x-1/2 rounded-full bg-emerald-100/90 shadow-[0_0_14px_rgba(167,243,208,0.5)]" />
+          </div>
+          <div className="min-w-0 pr-1">
+            <div className="atlas-map-label text-[8px] text-amber-100/52">Captain&apos;s bearing</div>
+            <div className="mt-1 flex items-end gap-2">
+              <div className="text-[1.65rem] font-black leading-none text-emerald-100">{heading}</div>
+              <div className="atlas-map-label pb-0.5 text-[10px] text-white/42">{Math.round(normalized)}°</div>
+            </div>
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-100/12 bg-black/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-50/72">
+              <Compass size={12} />
+              Route compass
+            </div>
+            <div className="mt-2 text-[11px] leading-relaxed text-slate-300/90">
+              Keep the bow pointed clean before you play.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   saveData: SaveData;
   selectedLevel: LevelConfig | null;
@@ -578,6 +654,7 @@ type Props = {
   hasCompletedStoryIntro: boolean;
   isMuted: boolean;
   isFullscreen: boolean;
+  isAtlasFocusMode: boolean;
   currentBuild: CurrentBuildSummary;
   weatherLabels: Record<WeatherType, string>;
   enemyLabels: Record<Enemy['enemyType'], string>;
@@ -598,6 +675,7 @@ type Props = {
   onOpenStory: () => void;
   onOpenProgressDrawer: () => void;
   onOpenSettings: () => void;
+  onToggleAtlasFocusMode: () => void;
   challengeRouteId: number | null;
   challengeAlias?: string | null;
   onToggleMute: () => void;
@@ -606,9 +684,13 @@ type Props = {
   onFocusFeaturedRoute: (levelId: number) => void;
   onAcceptChallenge?: (levelId: number) => void;
   onCenterSelected: () => void;
+  onPreviousRoute: () => void;
+  onNextRoute: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
+  onOpenBuildEntry?: (entryKey: string) => void;
+  compassAngleDeg?: number;
 };
 
 export function MenuScreen({
@@ -621,6 +703,7 @@ export function MenuScreen({
   hasCompletedStoryIntro,
   isMuted,
   isFullscreen,
+  isAtlasFocusMode,
   currentBuild,
   weatherLabels,
   enemyLabels,
@@ -633,6 +716,7 @@ export function MenuScreen({
   onOpenStory,
   onOpenProgressDrawer,
   onOpenSettings,
+  onToggleAtlasFocusMode,
   challengeRouteId,
   challengeAlias,
   onToggleMute,
@@ -641,14 +725,14 @@ export function MenuScreen({
   onFocusFeaturedRoute,
   onAcceptChallenge,
   onCenterSelected,
+  onPreviousRoute,
+  onNextRoute,
   onZoomIn,
   onZoomOut,
   onResetView,
+  onOpenBuildEntry,
+  compassAngleDeg = 0,
 }: Props) {
-  const totalCampaignLevels = LEVELS.length;
-  const primaryReach = currentBuild.rope[0];
-  const primaryDrive = currentBuild.movement[0];
-  const primaryGuard = currentBuild.defense[0];
   const RopeIcon = ropeTypeGlyphs[currentBuild.ropeType.id];
   const selectedRouteDiagnostics = selectedLevel ? getRouteDiagnostics(selectedLevel) : null;
   const routeAdvisory = selectedLevel
@@ -668,9 +752,6 @@ export function MenuScreen({
     result: saveData.levelResults[String(level.id)] ?? null,
   }));
   const unlockedRunways = levelsProgress.filter(({ level }) => level.id <= highestUnlockedLevel);
-  const routeLeaderboard = [...(saveData.runHistory ?? [])]
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 6);
   const selectedLevelLocalBest = selectedLevel
     ? [...(saveData.runHistory ?? [])]
         .filter((entry) => entry.levelId === selectedLevel.id)
@@ -685,10 +766,6 @@ export function MenuScreen({
     selectedLevelLocalBest && selectedLevelRivalBest
       ? selectedLevelRivalBest.score - selectedLevelLocalBest.score
       : null;
-  const campaignProgress = Math.max(
-    0,
-    Math.min(100, Math.round((campaignChallenge.progress / Math.max(1, campaignChallenge.target)) * 100)),
-  );
   const incomingChallengeRoute = LEVELS.find((level) => level.id === challengeRouteId) ?? null;
   const incomingChallengeAlias = challengeAlias?.trim() || 'A rival crew';
   const isIncomingChallengeRoute = Boolean(
@@ -708,269 +785,62 @@ export function MenuScreen({
         : featuredRouteCup?.tone === 'emerald'
           ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
           : 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100';
-  const featuredCupProgressFill =
-    featuredRouteCup?.tone === 'rose'
-      ? 'bg-rose-200'
-      : featuredRouteCup?.tone === 'amber'
-        ? 'bg-amber-200'
-        : featuredRouteCup?.tone === 'emerald'
-          ? 'bg-emerald-200'
-          : 'bg-cyan-200';
-  const localSeasonRunsByLevel = pickBestMenuSeasonRuns(
-    saveData.runHistory
-      .filter((entry) => entry.levelId <= highestUnlockedLevel)
-      .map(normalizeMenuRunHistory),
-  );
-  const rivalSeasonRunsByLevel = pickBestMenuSeasonRuns(
-    communityRunHistory
-      .filter((entry) => entry.levelId <= highestUnlockedLevel)
-      .map((entry) => entry as MenuSeasonRun),
-  );
-  const localSeasonRuns = Object.values(localSeasonRunsByLevel);
-  const rivalSeasonRuns = Object.values(rivalSeasonRunsByLevel);
-  const localSeasonPoints = computeSeasonPoints(localSeasonRuns);
-  const rivalSeasonPoints = computeSeasonPoints(rivalSeasonRuns);
-  const seasonPointGap = localSeasonPoints - rivalSeasonPoints;
-  const campaignRivalGaps = localSeasonRuns
-    .map((localRun) => {
-      const rival = rivalSeasonRunsByLevel[localRun.levelId];
-      if (!rival) return null;
-
-      return {
-        levelId: localRun.levelId,
-        levelName: localRun.levelName,
-        local: localRun,
-        rival,
-        gap: rival.score - localRun.score,
-      };
-    })
-    .filter((entry): entry is MenuRivalGap => entry !== null)
-    .sort((left, right) => Math.abs(right.gap) - Math.abs(left.gap));
-  const campaignLeadCount = campaignRivalGaps.filter((entry) => entry.gap <= 0).length;
-  const campaignTrailCount = campaignRivalGaps.filter((entry) => entry.gap > 0).length;
-  const closestChaseRoute = campaignRivalGaps.find((entry) => entry.gap > 0) ?? null;
-  const campaignPulseTone =
-    seasonPointGap >= 0
-      ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
-      : 'border-rose-200/20 bg-rose-500/10 text-rose-100';
-
-  const quickBuildTiles = [
-    { label: 'Rope', toneKey: 'cyan' as const, icon: <Wind size={14} />, entry: primaryReach, tone: 'bg-cyan-500/10 text-cyan-100 border-cyan-200/15' },
-    { label: 'Launch', toneKey: 'emerald' as const, icon: <Sparkles size={14} />, entry: primaryDrive, tone: 'bg-emerald-500/10 text-emerald-100 border-emerald-200/15' },
-    { label: 'Survival', toneKey: 'amber' as const, icon: <Shield size={14} />, entry: primaryGuard, tone: 'bg-amber-500/10 text-amber-100 border-amber-200/15' },
-  ];
+  const navigatorRoute = selectedLevel ?? LEVELS[Math.max(0, highestUnlockedLevel - 1)] ?? LEVELS[0];
+  const navigatorIndex = Math.max(0, LEVELS.findIndex((level) => level.id === navigatorRoute.id));
+  const hasPreviousRoute = navigatorIndex > 0;
+  const hasNextRoute = navigatorIndex < LEVELS.length - 1;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 font-ui text-white">
-      <div className="pointer-events-auto absolute left-4 top-4 w-[140px] backdrop-blur-xl atlas-surface atlas-elevated px-3 py-3 xl:left-[20rem] xl:w-[132px]">
-        <div className="atlas-map-label text-xs text-emerald-200/80">Forest To Magma</div>
-        <h1 className="atlas-title mt-2 text-[1.56rem] leading-[0.92] text-white xl:text-[1.34rem]">Infinite Swinger</h1>
-        <p className="atlas-panel-copy mt-1.5 text-[0.86rem] text-slate-200 xl:text-[0.78rem]">Inspect. Launch. Explore.</p>
-        <div className="atlas-surface-soft mt-3 rounded-2xl px-3 py-2 text-[0.8rem] text-slate-200">
-          Drag to roam. Double click starts.
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <button
-            onClick={onOpenProgressDrawer}
-            className="atlas-chip rounded-xl px-0 py-2 text-slate-100 transition-colors hover:bg-slate-800 xl:hidden"
-            title="Open campaign drawer"
-          >
-            <span className="inline-flex items-center justify-center"><Map size={15} /></span>
-          </button>
-          <button
-            onClick={onZoomOut}
-            className="atlas-chip rounded-xl px-0 py-2 text-slate-100 transition-colors hover:bg-slate-800"
-            title="Zoom out"
-          >
-            <span className="inline-flex items-center justify-center"><Minus size={15} /></span>
-          </button>
-          <button
-            onClick={onResetView}
-            className="atlas-chip rounded-xl px-0 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-100 transition-colors hover:bg-slate-800"
-            title="Reset view"
-          >
-            Map
-          </button>
-          <button
-            onClick={onZoomIn}
-            className="atlas-chip rounded-xl px-0 py-2 text-slate-100 transition-colors hover:bg-slate-800"
-            title="Zoom in"
-          >
-            <span className="inline-flex items-center justify-center"><Plus size={15} /></span>
-          </button>
-        </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(132,255,207,0.11),transparent_26%),radial-gradient(circle_at_78%_14%,rgba(251,191,36,0.1),transparent_22%),radial-gradient(circle_at_70%_78%,rgba(125,211,252,0.08),transparent_24%),linear-gradient(180deg,rgba(2,6,23,0.12),rgba(2,6,23,0.44))]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)] opacity-30" />
+      <button
+        type="button"
+        onClick={onOpenProgressDrawer}
+        className="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/76 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_44px_rgba(2,6,23,0.28)] backdrop-blur-xl xl:hidden"
+      >
+        <Map size={14} />
+        Atlas
+      </button>
+
+      <div data-ui-control className="pointer-events-auto absolute right-4 top-4 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full border border-white/10 bg-slate-950/70 px-2.5 py-2 text-left shadow-[0_18px_44px_rgba(2,6,23,0.3)] backdrop-blur-xl">
+        <span className="atlas-map-label hidden text-[9px] text-white/45 sm:inline">Build</span>
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200/20 bg-cyan-500/12 text-cyan-100">
+          <RopeIcon size={15} />
+        </span>
+        <span className="max-w-[9rem] truncate text-xs font-semibold text-white sm:max-w-[13rem]">
+          {currentBuild.ropeType.label}
+          <span className="hidden text-white/45 sm:inline"> · {currentBuild.equippedSkin}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenBuildEntry && currentBuild.rope[0]?.key) {
+              onOpenBuildEntry(currentBuild.rope[0].key);
+              return;
+            }
+            onOpenShop();
+          }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/20 bg-cyan-500/12 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-cyan-100 transition-colors hover:bg-cyan-500/20"
+        >
+          <ShoppingBag size={12} />
+          Shop
+        </button>
       </div>
 
-      <div className="pointer-events-auto absolute left-1/2 top-2 w-[min(280px,calc(100vw-20rem))] -translate-x-1/2 backdrop-blur-xl atlas-surface atlas-elevated px-3 py-2 xl:left-[calc(50%+4.75rem)] xl:w-[min(272px,calc(100vw-30rem))]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="atlas-map-label text-[10px] text-emerald-200/80">Loadout</div>
-            <div className="atlas-title truncate text-[0.95rem] text-white">{currentBuild.equippedSkin}</div>
-            <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/8 bg-slate-950/65 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-200">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/10 bg-white/5 text-cyan-200">
-                <RopeIcon size={10} />
-              </span>
-              <span className="text-emerald-200">Rope</span>
-              {currentBuild.ropeType.label}
-            </div>
-                <div className="mt-1.5 flex items-center gap-1.5">
-              <div className="atlas-chip rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-200">
-                Trail
-              </div>
-              <div className="flex items-center gap-1.5" aria-label={`Camp progress level ${highestUnlockedLevel}`}>
-                {Array.from({ length: totalCampaignLevels }).map((_, index) => (
-                  <span
-                    key={`camp-dot-${index}`}
-                    className={`h-3 w-3 rounded-full border border-white/10 ${
-                      index < highestUnlockedLevel ? 'bg-emerald-200' : 'bg-white/8 opacity-30'
-                    }`}
-                  />
-                ))}
-              </div>
-              <div className="atlas-chip rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-200">
-                L{highestUnlockedLevel}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-              {quickBuildTiles.map(({ label, toneKey, icon, entry, tone }) => (
-                <div key={label} className="rounded-2xl border border-white/8 bg-slate-900/72 px-2 py-1.5">
-                  <div className="flex items-center justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${tone}`}>
-                        {icon}
-                      </span>
-                      {label}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[0.86rem] font-bold text-white">{entry?.label ?? 'Base'}</div>
-                  <LevelDots level={entry?.level ?? 0} tone={toneKey} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <AtlasCompass angleDeg={compassAngleDeg} />
 
-            <div className="pointer-events-auto absolute right-3 top-3 flex w-[160px] flex-col gap-2 backdrop-blur-xl atlas-surface atlas-elevated p-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 text-[1.35rem] font-black text-amber-300">
-            <Coins size={22} />
-            {saveData.totalTokens}
-          </div>
-          <div className="atlas-chip rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-300">
-            {highestUnlockedLevel}/{totalCampaignLevels} open
-          </div>
-        </div>
-          <div className="grid grid-cols-2 gap-2">
-            <TopActionButton label="Shop" icon={<ShoppingBag size={15} />} onClick={onOpenShop} />
-            <TopActionButton label="Leaderboard" icon={<Trophy size={15} />} onClick={onOpenLeaderboard} />
-            <TopActionButton label="Settings" icon={<Settings2 size={15} />} onClick={onOpenSettings} />
-            <TopActionButton label={hasCompletedStoryIntro ? 'Story' : 'Tour'} icon={<BookOpen size={15} />} onClick={onOpenStory} />
-            <TopActionButton label={isMuted ? 'Sound Off' : 'Sound On'} icon={isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />} onClick={onToggleMute} />
-            <TopActionButton label={isFullscreen ? 'Window' : 'Full'} icon={<Maximize2 size={15} />} onClick={onToggleFullscreen} />
-          </div>
-        {featuredRouteCup ? (
-          <button
-            type="button"
-            onClick={() => onFocusFeaturedRoute(featuredRouteCup.levelId)}
-            className={`rounded-2xl border p-2.5 text-left transition-colors hover:bg-white/[0.08] ${featuredCupTone}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="atlas-map-label text-[9px] uppercase tracking-[0.18em] text-white/70">Daily Crew Cup</div>
-              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/80">
-                L{featuredRouteCup.levelId}
-              </span>
-            </div>
-            <div className="mt-1 text-sm font-black leading-tight text-white">{featuredRouteCup.title}</div>
-            <div className="mt-1 text-[10px] leading-relaxed text-white/80">{featuredRouteCup.detail}</div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${featuredCupProgressFill}`}
-                style={{ width: `${featuredRouteCup.progressPercent}%` }}
-              />
-            </div>
-            <div className="mt-1 flex items-center justify-between gap-2 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/60">
-              <span>{featuredRouteCup.targetLabel}</span>
-              <span>{featuredRouteCup.countdownLabel}</span>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px]">
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 px-2 py-2">
-                <div className="atlas-map-label text-[8px] text-white/45">You</div>
-                <div className="mt-1 font-black text-white">
-                  {featuredRouteCup.localBest ? `${featuredRouteCup.localBest.score}` : '--'}
-                </div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 px-2 py-2">
-                <div className="atlas-map-label truncate text-[8px] text-white/45">
-                  {featuredRouteCup.rivalBest?.playerLabel ?? 'Rival'}
-                </div>
-                <div className="mt-1 font-black text-white">
-                  {featuredRouteCup.rivalBest ? `${featuredRouteCup.rivalBest.score}` : '--'}
-                </div>
-              </div>
-            </div>
-          </button>
-        ) : null}
-          <div className={`mt-2 rounded-2xl border p-2.5 ${campaignPulseTone}`}>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="atlas-map-label text-[9px] uppercase tracking-[0.18em] text-white/70">Campaign Pulse</div>
-                <div className="mt-1 text-sm font-black text-white">
-                  {seasonPointGap >= 0 ? `+${seasonPointGap}` : `${seasonPointGap}`} vs rivals
-                </div>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[9px] uppercase tracking-[0.16em] text-white/75">
-                {rivalSeasonRuns.length === 0 ? 'No rivals' : `${rivalSeasonRuns.length} routes`}
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
-              <div className="rounded-xl border border-white/10 bg-white/8 px-2 py-2">
-                <div className="text-white/55">My season</div>
-                <div className="mt-1 text-sm font-black text-white">{localSeasonPoints}</div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 px-2 py-2">
-                <div className="text-white/55">Rival season</div>
-                <div className="mt-1 text-sm font-black text-white">{rivalSeasonPoints}</div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 px-2 py-2">
-                <div className="text-white/55">Lead / chase</div>
-                <div className="mt-1 text-sm font-black text-white">
-                  {campaignLeadCount}/{campaignTrailCount}
-                </div>
-              </div>
-            </div>
-            <div className="mt-2 text-[10px] text-white/70">
-              {closestChaseRoute
-                ? `Top pressure: route L${closestChaseRoute.levelId} ${closestChaseRoute.levelName} is behind by ${closestChaseRoute.gap} pts.`
-                : rivalSeasonRuns.length > 0
-                  ? 'Rival board is engaged on unlocked routes. Challenge the pressure lane first to push momentum.'
-                  : 'Share your runboard and import rival lanes to power this campaign pulse.'}
-            </div>
-            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-              {closestChaseRoute ? (
-                <button
-                  type="button"
-                  onClick={() => onFocusChallengeLevel(closestChaseRoute.levelId)}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-200/20 bg-amber-500/12 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100 transition-colors hover:bg-amber-500/20"
-                >
-                  Open pressure route
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={onOpenLeaderboard}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white transition-colors hover:bg-white/25"
-              >
-                Open boards
-              </button>
-            </div>
-          </div>
-      </div>
-
-      <div className="pointer-events-auto absolute bottom-2 left-1/2 w-[min(720px,calc(100vw-1rem))] -translate-x-1/2 backdrop-blur-xl atlas-surface-strong atlas-elevated p-2 xl:left-[calc(50%+4.5rem)] xl:w-[min(660px,calc(100vw-24rem))]">
+      <div
+        data-ui-control
+        className={`pointer-events-auto absolute bottom-3 left-1/2 w-[min(1120px,calc(100vw-1rem))] -translate-x-1/2 overflow-hidden rounded-[1.45rem] border border-white/10 bg-slate-950/82 p-2 shadow-[0_24px_70px_rgba(2,6,23,0.38)] backdrop-blur-xl sm:w-[min(1080px,calc(100vw-6rem))] lg:p-1.5 xl:w-[min(1040px,calc(100vw-11rem))] ${
+          isAtlasFocusMode
+            ? 'max-h-[min(24svh,216px)] lg:max-h-[min(18svh,164px)]'
+            : 'max-h-[min(40svh,320px)] lg:max-h-[min(24svh,198px)]'
+        }`}
+      >
         {selectedLevel ? (
-          <div className="grid h-full gap-2 lg:grid-cols-[minmax(0,1fr),132px]">
-            <div className="min-w-0 h-full overflow-hidden">
+          <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)] gap-2.5 lg:grid-cols-[minmax(0,1fr),172px] xl:grid-cols-[minmax(0,1fr),176px]">
+            <div className="atlas-scroll min-h-0 overflow-y-auto pr-1">
               {incomingChallengeRoute ? (
                 <div className="mb-2 rounded-2xl border border-cyan-200/20 bg-cyan-500/10 p-2">
                   <div className="flex items-center justify-between gap-2">
@@ -1031,7 +901,19 @@ export function MenuScreen({
                   <Trophy size={15} />
                   {selectedLevel.targetDistance}m
                 </span>
-                {featuredRouteCup && selectedLevel.id === featuredRouteCup.levelId ? (
+                <button
+                  type="button"
+                  onClick={onToggleAtlasFocusMode}
+                  aria-pressed={isAtlasFocusMode}
+                  aria-label={isAtlasFocusMode ? 'Show full route intel' : 'Switch to brief mode'}
+                  className={`atlas-chip inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    isAtlasFocusMode ? 'border-cyan-200/25 bg-cyan-500/12 text-cyan-100' : 'text-slate-100 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  {isAtlasFocusMode ? <BookOpen size={15} /> : <Eye size={15} />}
+                  {isAtlasFocusMode ? 'Show Details' : 'Hide Details'}
+                </button>
+                {!isAtlasFocusMode && featuredRouteCup && selectedLevel.id === featuredRouteCup.levelId ? (
                   <span className={`atlas-chip inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold ${featuredCupTone}`}>
                     <Sparkles size={15} />
                     Daily Crew Cup
@@ -1039,17 +921,17 @@ export function MenuScreen({
                 ) : null}
               </div>
 
-              <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <div className="mt-1.5 flex flex-wrap items-end gap-x-3 gap-y-1">
                 <div>
                   <div className="atlas-map-label text-[9px] text-slate-400">Route</div>
-                  <div className="atlas-title mt-0.5 text-[1.08rem] leading-[0.95] text-white">
+                  <div className="atlas-title mt-0.5 text-[1.2rem] leading-[0.95] text-white">
                     L{selectedLevel.id} <span className="text-amber-200">{selectedLevel.name}</span>
                   </div>
                 </div>
-                <div className="atlas-panel-copy text-[0.74rem] text-slate-300">{selectedLevel.description}</div>
+                <div className="atlas-panel-copy max-w-xl text-[0.74rem] text-slate-300">{selectedLevel.description}</div>
               </div>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="atlas-chip rounded-full px-2.5 py-1 text-[10px] text-slate-100">
                   Best {formatDurationMs(selectedLevelResult?.bestTimeMs ?? null)}
                 </span>
@@ -1065,239 +947,248 @@ export function MenuScreen({
                     />
                   ))}
                 </span>
-                {selectedLevel.allowedWeather.map((weatherType) => (
-                  <span
-                    key={weatherType}
-                    title={weatherLabels[weatherType]}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/15 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold text-cyan-100"
-                  >
-                    <WeatherIcon weatherType={weatherType} />
-                    {weatherLabels[weatherType]}
-                  </span>
-                ))}
-                <span className="atlas-chip rounded-full border-emerald-200/15 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-100">
-                  {selectedLevel.checkpointCount} checkpoints
-                </span>
-                <div className="ml-1 inline-flex items-center gap-1.5">
-                  {selectedLevel.allowedEnemies.map((enemyType) => (
-                    <span
-                      key={enemyType}
-                      title={enemyLabels[enemyType]}
-                      aria-label={enemyLabels[enemyType]}
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${threatTone[enemyType]}`}
-                    >
-                      <ThreatIcon type={enemyType} />
+                {!isAtlasFocusMode ? (
+                  <>
+                    {selectedLevel.allowedWeather.map((weatherType) => (
+                      <span
+                        key={weatherType}
+                        title={weatherLabels[weatherType]}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/15 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-semibold text-cyan-100"
+                      >
+                        <WeatherIcon weatherType={weatherType} />
+                        {weatherLabels[weatherType]}
+                      </span>
+                    ))}
+                    <span className="atlas-chip rounded-full border-emerald-200/15 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-100">
+                      {selectedLevel.checkpointCount} checkpoints
                     </span>
-                  ))}
-                </div>
+                    <div className="ml-1 inline-flex items-center gap-1.5">
+                      {selectedLevel.allowedEnemies.map((enemyType) => (
+                        <span
+                          key={enemyType}
+                          title={enemyLabels[enemyType]}
+                          aria-label={enemyLabels[enemyType]}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${threatTone[enemyType]}`}
+                        >
+                          <ThreatIcon type={enemyType} />
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
               </div>
 
-              <div className="mt-2 grid gap-2 md:grid-cols-2">
-                <div className="atlas-surface-soft rounded-[1.1rem] p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="atlas-map-label text-[10px] text-slate-400">Route Intel</div>
-                    <div className="atlas-chip rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                      {selectedRouteDiagnostics?.beatCount ?? selectedLevel.actTemplates.length} beats
-                    </div>
-                  </div>
-
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-2">
-                      <div className="atlas-map-label text-[9px] text-slate-500">Payout</div>
-                      <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-amber-200">
-                        <Coins size={14} />
-                        {selectedRouteDiagnostics?.totalCoins ?? 0}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-2">
-                      <div className="atlas-map-label text-[9px] text-slate-500">Threats</div>
-                      <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-rose-200">
-                        <Flame size={14} />
-                        {selectedRouteDiagnostics?.totalThreats ?? 0}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-2">
-                      <div className="atlas-map-label text-[9px] text-slate-500">Relays</div>
-                      <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-cyan-100">
-                        <Anchor size={14} />
-                        {selectedRouteDiagnostics?.checkpoints ?? selectedLevel.checkpointCount}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(selectedRouteDiagnostics?.actProfile ?? []).map(({ act, count }) => {
-                      const meta = actMeta[act];
-                      const Icon = meta.icon;
-                      return (
-                        <span
-                          key={`${act}-${count}`}
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${meta.tone}`}
-                        >
-                          <Icon size={12} />
-                          {meta.label}
-                          <span className="text-white/70">x{count}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-2 space-y-1.5">
-                    {(selectedRouteDiagnostics?.notes ?? []).map((note) => (
-                      <div
-                        key={note}
-                        className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-2 text-[11px] leading-relaxed text-slate-300"
-                      >
-                        {note}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="atlas-surface-soft rounded-[1.1rem] p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="atlas-map-label text-[10px] text-slate-400">Camp Read</div>
-                    <div
-                      className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${
-                        routeAdvisory ? advisoryTone[routeAdvisory.tone] : 'border-white/8 bg-slate-950/80 text-slate-300'
-                      }`}
-                    >
-                      {routeAdvisory?.badge ?? 'Ready'}
-                    </div>
-                  </div>
-
-                  <div className="mt-2 text-sm font-bold text-white">{routeAdvisory?.title ?? 'Route overview ready'}</div>
-                  <div className="mt-1 text-[11px] leading-relaxed text-slate-300">
-                    {routeAdvisory?.body ?? 'Inspect the route, center the camera, and launch when the line feels good.'}
-                  </div>
-
-                  <div className="mt-3 rounded-2xl border border-cyan-200/12 bg-cyan-500/6 px-3 py-3">
+              {!isAtlasFocusMode ? (
+                <div className="mt-2.5 grid gap-2 border-t border-white/8 pt-2.5 md:grid-cols-2">
+                  <div className="atlas-surface-soft rounded-[1.1rem] p-2">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="atlas-map-label text-[9px] text-cyan-200/80">Route Rivalry</div>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] ${
-                          routeRivalGap === null
-                            ? 'border-white/10 bg-white/5 text-white/55'
-                            : routeRivalGap > 0
-                              ? 'border-amber-200/20 bg-amber-500/10 text-amber-100'
-                              : routeRivalGap < 0
-                                ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
-                                : 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100'
+                      <div className="atlas-map-label text-[10px] text-slate-400">Route Intel</div>
+                      <div className="atlas-chip rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                        {selectedRouteDiagnostics?.beatCount ?? selectedLevel.actTemplates.length} beats
+                      </div>
+                    </div>
+
+                    <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                      <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-1.5">
+                        <div className="atlas-map-label text-[9px] text-slate-500">Payout</div>
+                        <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-amber-200">
+                          <Coins size={14} />
+                          {selectedRouteDiagnostics?.totalCoins ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-1.5">
+                        <div className="atlas-map-label text-[9px] text-slate-500">Threats</div>
+                        <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-rose-200">
+                          <Flame size={14} />
+                          {selectedRouteDiagnostics?.totalThreats ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-2 py-1.5">
+                        <div className="atlas-map-label text-[9px] text-slate-500">Relays</div>
+                        <div className="mt-1 inline-flex items-center gap-1.5 text-sm font-black text-cyan-100">
+                          <Anchor size={14} />
+                          {selectedRouteDiagnostics?.checkpoints ?? selectedLevel.checkpointCount}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {(selectedRouteDiagnostics?.actProfile ?? []).map(({ act, count }) => {
+                        const meta = actMeta[act];
+                        const Icon = meta.icon;
+                        return (
+                          <span
+                            key={`${act}-${count}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${meta.tone}`}
+                          >
+                            <Icon size={12} />
+                            {meta.label}
+                            <span className="text-white/70">x{count}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-1.5 space-y-1.5">
+                      {(selectedRouteDiagnostics?.notes ?? []).map((note) => (
+                        <div
+                          key={note}
+                          className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-1.5 text-[10px] leading-relaxed text-slate-300"
+                        >
+                          {note}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="atlas-surface-soft rounded-[1.1rem] p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="atlas-map-label text-[10px] text-slate-400">Camp Read</div>
+                      <div
+                        className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] ${
+                          routeAdvisory ? advisoryTone[routeAdvisory.tone] : 'border-white/8 bg-slate-950/80 text-slate-300'
                         }`}
                       >
+                        {routeAdvisory?.badge ?? 'Ready'}
+                      </div>
+                    </div>
+
+                    <div className="mt-1.5 text-sm font-bold text-white">{routeAdvisory?.title ?? 'Route overview ready'}</div>
+                    <div className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                      {routeAdvisory?.body ?? 'Inspect the route, center the camera, and launch when the line feels good.'}
+                    </div>
+
+                    <div className="mt-2 rounded-2xl border border-cyan-200/12 bg-cyan-500/6 px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="atlas-map-label text-[9px] text-cyan-200/80">Route Rivalry</div>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] ${
+                            routeRivalGap === null
+                              ? 'border-white/10 bg-white/5 text-white/55'
+                              : routeRivalGap > 0
+                                ? 'border-amber-200/20 bg-amber-500/10 text-amber-100'
+                                : routeRivalGap < 0
+                                  ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
+                                  : 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100'
+                          }`}
+                        >
+                          {routeRivalGap === null
+                            ? selectedLevelRivalBest
+                              ? 'First mark'
+                              : 'No rival'
+                            : routeRivalGap > 0
+                              ? 'Chasing'
+                              : routeRivalGap < 0
+                                ? 'Ahead'
+                                : 'Tied'}
+                        </span>
+                      </div>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-3 py-1.5">
+                          <div className="atlas-map-label text-[9px] text-slate-500">Your best</div>
+                          {selectedLevelLocalBest ? (
+                            <>
+                              <div className="mt-1 text-sm font-black text-white">{selectedLevelLocalBest.score} pts</div>
+                              <div className="mt-1 text-[10px] text-white/60">
+                                {selectedLevelLocalBest.tokens} tk • {selectedLevelLocalBest.livesLeft}L • {formatDurationMs(selectedLevelLocalBest.elapsedMs)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="mt-1 text-[10px] text-white/55">No recorded run on this route yet.</div>
+                          )}
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-3 py-1.5">
+                          <div className="atlas-map-label text-[9px] text-slate-500">Top imported rival</div>
+                          {selectedLevelRivalBest ? (
+                            <>
+                              <div className="mt-1 text-sm font-black text-white">
+                                {selectedLevelRivalBest.score} pts
+                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
+                                  {selectedLevelRivalBest.playerLabel}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[10px] text-white/60">
+                                {selectedLevelRivalBest.tokens} tk • {selectedLevelRivalBest.livesLeft}L • {formatDurationMs(selectedLevelRivalBest.elapsedMs)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="mt-1 text-[10px] text-white/55">Import a runboard to create route pressure.</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-1.5 text-[9px] uppercase tracking-[0.18em] text-white/55">
                         {routeRivalGap === null
                           ? selectedLevelRivalBest
-                            ? 'First mark'
-                            : 'No rival'
+                            ? 'Open the route and set your first benchmark against the imported board.'
+                            : 'Share or import a runboard to turn this route into a head-to-head race.'
                           : routeRivalGap > 0
-                            ? 'Chasing'
+                            ? `Beat the rival by ${routeRivalGap} pts to take this lane.`
                             : routeRivalGap < 0
-                              ? 'Ahead'
-                              : 'Tied'}
-                      </span>
-                    </div>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-3 py-2">
-                        <div className="atlas-map-label text-[9px] text-slate-500">Your best</div>
-                        {selectedLevelLocalBest ? (
-                          <>
-                            <div className="mt-1 text-sm font-black text-white">{selectedLevelLocalBest.score} pts</div>
-                            <div className="mt-1 text-[10px] text-white/60">
-                              {selectedLevelLocalBest.tokens} tk • {selectedLevelLocalBest.livesLeft}L • {formatDurationMs(selectedLevelLocalBest.elapsedMs)}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="mt-1 text-[11px] text-white/55">No recorded run on this route yet.</div>
-                        )}
-                      </div>
-                      <div className="rounded-2xl border border-white/8 bg-slate-950/65 px-3 py-2">
-                        <div className="atlas-map-label text-[9px] text-slate-500">Top imported rival</div>
-                        {selectedLevelRivalBest ? (
-                          <>
-                            <div className="mt-1 text-sm font-black text-white">
-                              {selectedLevelRivalBest.score} pts
-                              <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
-                                {selectedLevelRivalBest.playerLabel}
-                              </span>
-                            </div>
-                            <div className="mt-1 text-[10px] text-white/60">
-                              {selectedLevelRivalBest.tokens} tk • {selectedLevelRivalBest.livesLeft}L • {formatDurationMs(selectedLevelRivalBest.elapsedMs)}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="mt-1 text-[11px] text-white/55">Import a runboard to create route pressure.</div>
-                        )}
+                              ? `You lead this lane by ${Math.abs(routeRivalGap)} pts. Defend it with a cleaner clear.`
+                              : 'Dead even. Cleaner tokens or a faster line breaks the tie.'}
                       </div>
                     </div>
-                    <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-white/55">
-                      {routeRivalGap === null
-                        ? selectedLevelRivalBest
-                          ? 'Open the route and set your first benchmark against the imported board.'
-                          : 'Share or import a runboard to turn this route into a head-to-head race.'
-                        : routeRivalGap > 0
-                          ? `Beat the rival by ${routeRivalGap} pts to take this lane.`
-                          : routeRivalGap < 0
-                            ? `You lead this lane by ${Math.abs(routeRivalGap)} pts. Defend it with a cleaner clear.`
-                            : 'Dead even. Cleaner tokens or a faster line breaks the tie.'}
-                    </div>
-                  </div>
 
-                  <div className="mt-3">
-                    <div className="atlas-map-label text-[9px] text-slate-500">Build Fit</div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {visibleRouteFit.length > 0 ? (
-                        visibleRouteFit.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/15 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-100"
-                          >
-                            <Sparkles size={11} />
-                            {tag}
+                    <div className="mt-2">
+                      <div className="atlas-map-label text-[9px] text-slate-500">Build Fit</div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {visibleRouteFit.length > 0 ? (
+                          visibleRouteFit.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/15 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-100"
+                            >
+                              <Sparkles size={11} />
+                              {tag}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="atlas-chip rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            Balanced build
                           </span>
-                        ))
-                      ) : (
-                        <span className="atlas-chip rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          Balanced build
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {visibleSynergies.length > 0 ? (
-                    <div className="mt-3">
-                      <div className="atlas-map-label text-[9px] text-slate-500">Synergy</div>
-                      <div className="mt-1.5 space-y-1.5">
-                        {visibleSynergies.map((synergy) => (
-                          <div
-                            key={synergy}
-                            className="rounded-2xl border border-cyan-200/10 bg-cyan-500/5 px-3 py-2 text-[11px] leading-relaxed text-cyan-50"
-                          >
-                            {synergy}
-                          </div>
-                        ))}
+                        )}
                       </div>
                     </div>
-                  ) : null}
+
+                    {visibleSynergies.length > 0 ? (
+                      <div className="mt-2">
+                        <div className="atlas-map-label text-[9px] text-slate-500">Synergy</div>
+                        <div className="mt-1 space-y-1.5">
+                          {visibleSynergies.map((synergy) => (
+                            <div
+                              key={synergy}
+                              className="rounded-2xl border border-cyan-200/10 bg-cyan-500/5 px-3 py-1.5 text-[10px] leading-relaxed text-cyan-50"
+                            >
+                              {synergy}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
 
-            <div className="flex h-full flex-col justify-between gap-2 atlas-surface-soft rounded-[1.1rem] p-2">
+            <div className="atlas-scroll flex min-h-0 flex-col gap-2.5 overflow-y-auto rounded-[1.1rem] border border-white/10 bg-slate-950/72 p-2.5">
               <div>
                 <div className="atlas-map-label text-[10px] text-slate-400">Launch</div>
-                <div className="atlas-panel-copy mt-1 text-[0.7rem] text-slate-300">Center or launch.</div>
-                <button
-                  onClick={onCenterSelected}
-                  className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/72 px-3 py-1.5 text-[10px] font-semibold text-slate-100 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-500"
-                >
-                  <Map size={14} />
-                  Center
-                </button>
+                <div className="mt-1 text-sm font-black text-white">
+                  {selectedLevelLocked ? 'Route still locked' : 'Launch from the dock'}
+                </div>
+                <div className="mt-2 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-200">
+                  {selectedLevelLocked ? `Needs L${Math.max(1, selectedLevel.id - 1)} clear` : 'Play available'}
+                </div>
+                <div className="atlas-panel-copy mt-1.5 text-[0.7rem] leading-relaxed text-slate-300">
+                  {selectedLevelLocked
+                    ? `Clear L${Math.max(1, selectedLevel.id - 1)} first to bring this lane online.`
+                    : 'Inspect the line, then play when the swing feels right.'}
+                </div>
               </div>
               <button
                 onClick={onStartGame}
                 disabled={selectedLevelLocked}
-                className={`rounded-2xl px-4 py-2.5 text-[0.9rem] font-bold transition-all ${
+                className={`mt-auto rounded-2xl px-4 py-2 text-[0.88rem] font-bold transition-all ${
                   selectedLevelLocked
                     ? 'cursor-not-allowed bg-slate-800 text-slate-500'
                     : 'bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-950/30 hover:-translate-y-0.5 hover:bg-emerald-300'
@@ -1305,7 +1196,7 @@ export function MenuScreen({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Play size={18} />
-                    {selectedLevelLocked ? 'Locked Route' : 'Play Level'}
+                    {selectedLevelLocked ? 'Locked Route' : 'Play Route'}
                   </span>
               </button>
             </div>
@@ -1315,7 +1206,7 @@ export function MenuScreen({
               <div>
                 <div className="atlas-map-label text-sm text-slate-400">Route</div>
                 <div className="atlas-title mt-1 text-[1.25rem] text-white">Choose a route</div>
-                <div className="atlas-panel-copy mt-1 text-[0.8rem] text-slate-300">Click inspects. Double click launches.</div>
+                <div className="atlas-panel-copy mt-1 text-[0.8rem] text-slate-300">Click inspects. Double click previews, then launches.</div>
               </div>
             <div className="atlas-chip rounded-full px-4 py-2 text-sm font-semibold text-slate-300">
               Open L{highestUnlockedLevel}

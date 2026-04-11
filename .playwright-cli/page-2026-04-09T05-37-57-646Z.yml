@@ -1,0 +1,64 @@
+- dialog "Camp Wakes First" [ref=e1212]:
+  - generic:
+    - img
+  - generic [ref=e1213]:
+    - banner [ref=e1214]:
+      - generic [ref=e1215]:
+        - generic [ref=e1216]:
+          - generic [ref=e1217]:
+            - img [ref=e1218]
+            - text: Story Map
+          - generic [ref=e1220]: Beat 1/7
+          - generic [ref=e1221]:
+            - img [ref=e1222]
+            - text: FRAME 01
+        - generic [ref=e1223]:
+          - button "Show details" [ref=e1224] [cursor=pointer]:
+            - img [ref=e1225]
+            - text: Show details
+          - generic [ref=e1227]:
+            - img [ref=e1228]
+            - text: Comic Motion
+      - generic [ref=e1229]:
+        - generic [ref=e1230]: Issue 01
+        - heading "Camp Wakes First" [level=2] [ref=e1231]
+    - generic [ref=e1233]:
+      - generic [ref=e1234]:
+        - img [ref=e1235]
+        - generic:
+          - generic: Scout
+          - generic: Scout Nara
+        - generic:
+          - generic: Panel Caption
+          - generic: Push the camp deeper before the ash reaches the roots.
+      - generic [ref=e1260]:
+        - generic [ref=e1261]:
+          - generic [ref=e1262]: Focus caption
+          - generic [ref=e1263]: Outer Canopy Camp
+        - generic [ref=e1264]:
+          - paragraph [ref=e1265]: The camp hears the magma core before it sees it.
+          - paragraph [ref=e1266]: The canopy is still safe here, but only barely.
+        - generic [ref=e1267]: Level 1 is the first scouting swing.
+    - contentinfo [ref=e1268]:
+      - generic [ref=e1269]:
+        - generic [ref=e1270]:
+          - generic [ref=e1271]: ← Back
+          - generic [ref=e1272]: Enter / → Next
+          - generic [ref=e1273]: Esc Skip
+          - generic [ref=e1274]: M Menu
+        - generic [ref=e1275]:
+          - button "Skip" [ref=e1276] [cursor=pointer]:
+            - generic [ref=e1277]:
+              - text: Skip
+              - img [ref=e1278]
+          - button "Main Menu" [ref=e1280] [cursor=pointer]:
+            - generic [ref=e1281]:
+              - img [ref=e1282]
+              - text: Main Menu
+        - button "Next panel" [active] [ref=e1285] [cursor=pointer]:
+          - generic [ref=e1286]:
+            - text: Next panel
+            - img [ref=e1287]
+      - generic [ref=e1289]:
+        - generic [ref=e1290]: Frame 1
+        - generic [ref=e1299]: "Next: beat 2"

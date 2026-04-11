@@ -266,6 +266,31 @@ export const INTRO_STORY_SEQUENCE: StorySequence = {
       cameraTarget: { x: 1730, y: 90, zoom: 0.98 },
       cameraKeyframe: { x: 1730, y: 90, zoom: 0.96, easing: 'easeInOut', lingerMs: 1500 },
     },
+    {
+      id: 'signal-ladder',
+      regionId: 'aether-bastion',
+      title: 'Signal The Ladder',
+      kicker: 'Issue 08',
+      body:
+        'The top of the atlas is no longer quiet.\nImported boards leave ghost routes on the map, and every crew can read the pressure now.\nThe best run is the one that makes the next rival want to answer.',
+      hint: 'Shared boards turn the finale into a live ladder.',
+      visual: {
+        scene: 'magma',
+        speaker: 'Relay Vale',
+        caption: 'A board in the relay becomes the next route to beat.',
+        accentWord: 'Signal',
+        characterId: 'relay',
+        supportCharacterId: 'kellan',
+      },
+      focusLevelId: 13,
+      highlightLevelIds: [12, 13],
+      revealLevels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      revealScope: 'full_route',
+      voiceCueId: 'story_intro_obelisk',
+      revealAction: 'show_goal',
+      cameraTarget: { x: 1730, y: 90, zoom: 0.98 },
+      cameraKeyframe: { x: 1730, y: 90, zoom: 0.96, easing: 'easeInOut', lingerMs: 1500 },
+    },
   ],
 };
 

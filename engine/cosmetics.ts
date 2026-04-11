@@ -12,6 +12,8 @@ export const ROPE_TYPE_LABELS: Record<RopeType, string> = {
   braid: 'Braided Vine',
   chain: 'Iron Chain',
   silk: 'Silk Thread',
+  reed: 'Marsh Reed',
+  ember: 'Ember Cable',
 };
 
 export const ROPE_TYPE_PROFILES: Record<
@@ -82,6 +84,32 @@ export const ROPE_TYPE_PROFILES: Record<
     sagScale: 1.16,
     breakScale: 0.9,
   },
+  reed: {
+    label: ROPE_TYPE_LABELS.reed,
+    description: 'A buoyant reed line that settles quickly over water and wind.',
+    ropeColor: '#5eead4',
+    stressColor: '#fcd34d',
+    glowColor: 'rgba(94, 234, 212, 0.34)',
+    thicknessScale: 0.94,
+    reachScale: 1.05,
+    pumpScale: 0.96,
+    brakeScale: 1.07,
+    sagScale: 1.08,
+    breakScale: 0.96,
+  },
+  ember: {
+    label: ROPE_TYPE_LABELS.ember,
+    description: 'A heat-treated cable built for ash gusts and fierce speed exits.',
+    ropeColor: '#fb923c',
+    stressColor: '#fde68a',
+    glowColor: 'rgba(251, 146, 60, 0.35)',
+    thicknessScale: 1.02,
+    reachScale: 0.97,
+    pumpScale: 1.08,
+    brakeScale: 0.92,
+    sagScale: 0.86,
+    breakScale: 1.05,
+  },
 };
 
 export const UPGRADE_DISPLAY_RULES: UpgradeDisplayRule[] = [
@@ -104,6 +132,12 @@ const getSkinPalette = (save: SaveData) => {
       return { furColor: '#ECEFF1', bellyColor: '#cfd8dc', limbColor: '#546e7a', accentColor: '#dff6ff' };
     case 'skin_ninja':
       return { furColor: '#212121', bellyColor: '#6a5c4d', limbColor: '#161616', accentColor: '#ef4444' };
+    case 'skin_moss':
+      return { furColor: '#335241', bellyColor: '#a7d7af', limbColor: '#18281f', accentColor: '#86efac' };
+    case 'skin_orchid':
+      return { furColor: '#a43ea0', bellyColor: '#f3d3ff', limbColor: '#411744', accentColor: '#f0abfc' };
+    case 'skin_ember':
+      return { furColor: '#c65d2f', bellyColor: '#ffd3ad', limbColor: '#5a2415', accentColor: '#fb923c' };
     default:
       return { furColor: baseFur, bellyColor: '#d7b08a', limbColor: '#3c2417', accentColor: '#fde68a' };
   }

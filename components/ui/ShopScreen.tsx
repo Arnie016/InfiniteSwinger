@@ -27,6 +27,7 @@ type Props = {
   onBuyItem: (item: ShopItem) => void;
   onEquipSkin: (skinId: string) => void;
   onEquipRopeType: (ropeType: string) => void;
+  onGrantTestWallet?: () => void;
   initialSelectedItemId?: string | null;
 };
 
@@ -43,18 +44,46 @@ const skinGroupOrder = ['Cosmetics'] as const;
 function getShopTheme(item: ShopItem) {
   if (item.type === 'SKIN') {
     switch (item.id) {
-      case 'yeti':
+      case 'skin_winter':
         return {
           accent: 'cyan',
           iconWrap: 'border-cyan-200/30 bg-cyan-400/15 text-cyan-100',
           glow: 'from-cyan-200/50 via-slate-100/20 to-sky-300/30',
           badge: 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100',
         };
-      case 'volcanic':
+      case 'skin_ember':
         return {
           accent: 'amber',
           iconWrap: 'border-amber-200/30 bg-amber-400/15 text-amber-100',
           glow: 'from-orange-200/50 via-amber-200/20 to-rose-300/30',
+          badge: 'border-amber-200/20 bg-amber-500/12 text-amber-100',
+        };
+      case 'skin_orchid':
+        return {
+          accent: 'rose',
+          iconWrap: 'border-fuchsia-200/30 bg-fuchsia-400/15 text-fuchsia-100',
+          glow: 'from-fuchsia-200/55 via-rose-200/22 to-cyan-200/24',
+          badge: 'border-fuchsia-200/20 bg-fuchsia-500/12 text-fuchsia-100',
+        };
+      case 'skin_moss':
+        return {
+          accent: 'emerald',
+          iconWrap: 'border-emerald-200/30 bg-emerald-400/15 text-emerald-100',
+          glow: 'from-emerald-200/50 via-lime-200/20 to-cyan-200/20',
+          badge: 'border-emerald-200/20 bg-emerald-500/12 text-emerald-100',
+        };
+      case 'skin_cyber':
+        return {
+          accent: 'cyan',
+          iconWrap: 'border-cyan-200/30 bg-cyan-400/15 text-cyan-100',
+          glow: 'from-cyan-200/60 via-sky-200/20 to-indigo-300/24',
+          badge: 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100',
+        };
+      case 'skin_golden':
+        return {
+          accent: 'amber',
+          iconWrap: 'border-amber-200/30 bg-amber-400/15 text-amber-100',
+          glow: 'from-amber-200/60 via-yellow-200/20 to-orange-300/24',
           badge: 'border-amber-200/20 bg-amber-500/12 text-amber-100',
         };
       default:
@@ -89,6 +118,20 @@ function getShopTheme(item: ShopItem) {
           iconWrap: 'border-fuchsia-200/30 bg-fuchsia-400/15 text-fuchsia-100',
           glow: 'from-fuchsia-200/50 via-pink-200/20 to-cyan-200/25',
           badge: 'border-fuchsia-200/20 bg-fuchsia-500/12 text-fuchsia-100',
+        };
+      case 'reed':
+        return {
+          accent: 'cyan',
+          iconWrap: 'border-teal-200/30 bg-teal-400/15 text-teal-100',
+          glow: 'from-teal-200/55 via-cyan-200/20 to-emerald-200/20',
+          badge: 'border-teal-200/20 bg-teal-500/12 text-teal-100',
+        };
+      case 'ember':
+        return {
+          accent: 'amber',
+          iconWrap: 'border-orange-200/30 bg-orange-400/15 text-orange-100',
+          glow: 'from-orange-200/55 via-amber-200/18 to-rose-300/22',
+          badge: 'border-orange-200/20 bg-orange-500/12 text-orange-100',
         };
       default:
         return {
@@ -158,6 +201,68 @@ function ShopGlyph({
   );
 }
 
+function PreviewPosterFrame({
+  item,
+  theme,
+  statusLabel,
+  footerLabel,
+  footerTone = 'border-white/10 bg-slate-950/80 text-slate-100',
+  children,
+}: {
+  item: ShopItem;
+  theme: ReturnType<typeof getShopTheme>;
+  statusLabel: string;
+  footerLabel: string;
+  footerTone?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative h-48 overflow-hidden rounded-[1.7rem] border border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.08),transparent_32%),linear-gradient(180deg,rgba(7,12,20,0.98),rgba(8,22,24,0.9))]">
+      <div className="atlas-preview-poster-pan absolute inset-0">
+        <div className={`absolute inset-x-6 top-4 h-24 rounded-full bg-gradient-to-r ${theme.glow} opacity-40 blur-3xl`} />
+        <div className="absolute inset-x-10 bottom-4 h-20 rounded-full bg-white/6 blur-2xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(2,6,23,0.12)_48%,rgba(2,6,23,0.45))]" />
+        {children}
+      </div>
+      <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
+      <div className={`absolute right-4 top-4 rounded-full border px-3 py-1 text-[11px] font-semibold ${theme.badge}`}>
+        {statusLabel}
+      </div>
+      <div className={`absolute bottom-4 left-4 rounded-full border px-3 py-1 text-xs font-semibold ${footerTone}`}>
+        {footerLabel}
+      </div>
+    </div>
+  );
+}
+
+function PreviewFigure({
+  headTone,
+  bodyTone,
+  maskTone,
+  accentTone,
+  scarfTone,
+  className = '',
+}: {
+  headTone: string;
+  bodyTone: string;
+  maskTone: string;
+  accentTone: string;
+  scarfTone: string;
+  className?: string;
+}) {
+  return (
+    <div className={`atlas-preview-float absolute bottom-5 left-1/2 h-28 w-24 -translate-x-1/2 ${className}`}>
+      <div className={`absolute bottom-0 left-1/2 h-16 w-20 -translate-x-1/2 rounded-[40%_40%_24%_24%/46%_46%_18%_18%] ${bodyTone} shadow-[0_18px_32px_rgba(0,0,0,0.35)]`} />
+      <div className={`absolute bottom-[3.05rem] left-[calc(50%-18px)] h-10 w-6 rotate-[16deg] rounded-full ${scarfTone} opacity-90`} />
+      <div className={`absolute bottom-[3.65rem] left-[calc(50%+10px)] h-12 w-8 -rotate-[22deg] rounded-full blur-[1px] ${accentTone} opacity-75`} />
+      <div className={`absolute bottom-[3.45rem] left-1/2 h-[4.3rem] w-[4.3rem] -translate-x-1/2 rounded-full border-4 border-white/90 ${headTone} shadow-lg shadow-black/35`} />
+      <div className={`absolute bottom-[5.15rem] left-1/2 h-6 w-10 -translate-x-1/2 rounded-[0.9rem] ${maskTone}`} />
+      <div className="absolute bottom-[5.9rem] left-[calc(50%-10px)] h-1.5 w-1.5 rounded-full bg-white" />
+      <div className="absolute bottom-[5.9rem] left-[calc(50%+4px)] h-1.5 w-1.5 rounded-full bg-white" />
+    </div>
+  );
+}
+
 function ShopVisualPreview({
   item,
   currentLevel,
@@ -171,28 +276,72 @@ function ShopVisualPreview({
   isEquipped: boolean;
   theme: ReturnType<typeof getShopTheme>;
 }) {
-  const commonMonkey = (
-    <div className="atlas-preview-float absolute bottom-8 left-1/2 h-16 w-16 -translate-x-1/2 rounded-full border-4 border-white bg-slate-700 shadow-lg shadow-black/40">
-      <div className="absolute left-1/2 top-2 h-5 w-8 -translate-x-1/2 rounded-md bg-amber-200" />
-      <div className="absolute left-5 top-4 h-1.5 w-1.5 rounded-full bg-slate-900" />
-      <div className="absolute right-5 top-4 h-1.5 w-1.5 rounded-full bg-slate-900" />
-    </div>
-  );
+  const statusLabel =
+    item.type === 'UPGRADE'
+      ? currentLevel > 0
+        ? `L${currentLevel}`
+        : 'Preview'
+      : isEquipped
+        ? 'Equipped'
+        : isOwned
+          ? 'Owned'
+          : 'Preview';
+  const portraitTone =
+    theme.accent === 'amber'
+      ? {
+          headTone: 'bg-amber-50',
+          bodyTone: 'bg-[linear-gradient(180deg,rgba(180,83,9,0.92),rgba(69,26,3,0.95))]',
+          maskTone: 'bg-slate-900/88',
+          accentTone: 'bg-orange-300/65',
+          scarfTone: 'bg-amber-200/80',
+        }
+      : theme.accent === 'rose'
+        ? {
+            headTone: 'bg-fuchsia-50',
+            bodyTone: 'bg-[linear-gradient(180deg,rgba(126,34,206,0.9),rgba(49,12,68,0.94))]',
+            maskTone: 'bg-slate-950/88',
+            accentTone: 'bg-fuchsia-300/65',
+            scarfTone: 'bg-rose-200/80',
+          }
+        : theme.accent === 'cyan'
+          ? {
+              headTone: 'bg-cyan-50',
+              bodyTone: 'bg-[linear-gradient(180deg,rgba(8,145,178,0.9),rgba(8,47,73,0.94))]',
+              maskTone: 'bg-slate-950/88',
+              accentTone: 'bg-cyan-300/65',
+              scarfTone: 'bg-sky-200/80',
+            }
+          : {
+              headTone: 'bg-emerald-50',
+              bodyTone: 'bg-[linear-gradient(180deg,rgba(6,95,70,0.92),rgba(6,46,33,0.95))]',
+              maskTone: 'bg-slate-950/88',
+              accentTone: 'bg-emerald-300/65',
+              scarfTone: 'bg-lime-200/78',
+            };
 
   if (item.type === 'SKIN') {
     return (
-      <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-        <div className={`absolute inset-x-6 top-4 h-24 rounded-full bg-gradient-to-r ${theme.glow} opacity-35 blur-2xl`} />
-        <div className="absolute inset-x-8 bottom-5 h-16 rounded-full bg-white/5 blur-xl" />
-        <div className={`absolute bottom-8 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-4 border-white ${isEquipped ? 'bg-amber-100' : 'bg-slate-200'} shadow-lg shadow-black/40`} />
-        <div className="absolute bottom-[6.3rem] left-1/2 h-6 w-10 -translate-x-1/2 rounded-md bg-slate-900/85" />
-        <div className="absolute bottom-[6.95rem] left-[calc(50%-10px)] h-1.5 w-1.5 rounded-full bg-white" />
-        <div className="absolute bottom-[6.95rem] left-[calc(50%+4px)] h-1.5 w-1.5 rounded-full bg-white" />
-        <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-        <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-slate-100">
-          {isEquipped ? 'Equipped now' : isOwned ? 'Owned skin' : 'Preview'}
-        </div>
-      </div>
+      <PreviewPosterFrame
+        item={item}
+        theme={theme}
+        statusLabel={statusLabel}
+        footerLabel={isEquipped ? 'Live skin' : isOwned ? 'Owned skin' : 'Preview skin'}
+      >
+        <div className="absolute inset-x-12 top-7 h-28 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute inset-x-8 top-8 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+        <div className="absolute left-1/2 top-7 h-28 w-28 -translate-x-1/2 rounded-full border border-white/10 bg-white/5" />
+        <div className="absolute left-1/2 top-10 h-20 w-20 -translate-x-1/2 rounded-full border border-white/12 bg-white/5" />
+        <div className="absolute left-[18%] top-[30%] h-24 w-10 -rotate-[16deg] rounded-full bg-white/6 blur-xl" />
+        <div className="absolute right-[16%] top-[34%] h-24 w-12 rotate-[18deg] rounded-full bg-white/6 blur-xl" />
+        <PreviewFigure
+          headTone={portraitTone.headTone}
+          bodyTone={portraitTone.bodyTone}
+          maskTone={portraitTone.maskTone}
+          accentTone={portraitTone.accentTone}
+          scarfTone={portraitTone.scarfTone}
+          className="bottom-4"
+        />
+      </PreviewPosterFrame>
     );
   }
 
@@ -202,6 +351,10 @@ function ShopVisualPreview({
         ? 'from-amber-200/60 via-orange-200/25 to-red-300/20'
         : item.ropeType === 'silk'
         ? 'from-fuchsia-200/55 via-cyan-200/25 to-white/10'
+        : item.ropeType === 'reed'
+        ? 'from-teal-200/60 via-cyan-200/22 to-emerald-200/16'
+        : item.ropeType === 'ember'
+        ? 'from-orange-200/65 via-amber-200/24 to-rose-300/18'
         : item.ropeType === 'braid'
         ? 'from-cyan-200/55 via-sky-200/25 to-emerald-200/12'
         : 'from-emerald-200/50 via-lime-200/20 to-cyan-200/15';
@@ -210,6 +363,10 @@ function ShopVisualPreview({
         ? 'Heavy line'
         : item.ropeType === 'silk'
         ? 'Smooth line'
+        : item.ropeType === 'reed'
+        ? 'Buoyant line'
+        : item.ropeType === 'ember'
+        ? 'Hot line'
         : item.ropeType === 'braid'
         ? 'Tight line'
         : 'Balanced line';
@@ -218,97 +375,167 @@ function ShopVisualPreview({
         ? 'atlas-preview-rope-chain'
         : item.ropeType === 'silk'
         ? 'atlas-preview-rope-silk'
+        : item.ropeType === 'reed'
+        ? 'atlas-preview-rope-reed'
+        : item.ropeType === 'ember'
+        ? 'atlas-preview-rope-ember'
         : item.ropeType === 'braid'
         ? 'atlas-preview-rope-braid'
         : 'atlas-preview-rope-vine';
+    const ropeStroke =
+      item.ropeType === 'chain'
+        ? '#f5d08a'
+        : item.ropeType === 'silk'
+          ? '#f5d0fe'
+          : item.ropeType === 'reed'
+            ? '#7dd3c7'
+            : item.ropeType === 'ember'
+              ? '#fdba74'
+              : item.ropeType === 'braid'
+                ? '#7dd3fc'
+                : '#86efac';
+
     return (
-      <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-        <div className={`absolute inset-x-6 top-4 h-24 rounded-full bg-gradient-to-r ${ropeTone} opacity-45 blur-2xl`} />
-        <div className="absolute inset-x-10 bottom-8 h-14 rounded-full bg-white/5 blur-xl" />
-        <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-        <div className="absolute left-1/2 top-9 h-2 w-28 -translate-x-1/2 rounded-full bg-white/35 blur-[1px]" />
-        <div className="atlas-preview-float absolute left-1/2 top-8 h-16 w-16 -translate-x-1/2 rounded-full border-4 border-white bg-slate-700 shadow-lg shadow-black/40" />
-        <div className={`atlas-preview-rope absolute left-1/2 top-[3.6rem] h-24 w-10 -translate-x-1/2 ${ropeClass}`}>
+      <PreviewPosterFrame
+        item={item}
+        theme={theme}
+        statusLabel={statusLabel}
+        footerLabel={ropeLabel}
+        footerTone="border-cyan-200/15 bg-slate-950/75 text-slate-100"
+      >
+        <svg viewBox="0 0 320 192" className="absolute inset-0 h-full w-full">
+          <path d="M0 148C52 128 102 122 156 134C214 147 252 149 320 120V192H0Z" fill="rgba(15,23,42,0.88)" />
+          <path d="M0 166C62 144 118 150 176 170C232 190 274 184 320 166V192H0Z" fill="rgba(30,41,59,0.92)" />
+          <path d="M56 42C98 40 134 58 178 90C194 101 206 112 218 126" stroke={ropeStroke} strokeWidth="5" fill="none" strokeLinecap="round" />
+        </svg>
+        <div className="absolute left-[56px] top-[38px] h-3.5 w-3.5 rounded-full bg-white/80 shadow-[0_0_14px_rgba(255,255,255,0.35)]" />
+        <div className={`atlas-preview-rope absolute left-[143px] top-[58px] h-24 w-16 -translate-x-1/2 ${ropeClass}`}>
           <div className={`atlas-preview-rope-core bg-gradient-to-b ${ropeTone}`} />
         </div>
+        <div className="atlas-preview-swing-mid absolute left-[68%] top-[58%] h-20 w-20 -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute bottom-0 left-1/2 h-10 w-12 -translate-x-1/2 rounded-[45%_45%_28%_28%] bg-slate-950 shadow-[0_14px_24px_rgba(0,0,0,0.35)]" />
+          <div className="absolute bottom-7 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full border-[3px] border-white/90 bg-slate-700" />
+          <div className="absolute bottom-[2.5rem] left-[calc(50%-8px)] h-1.5 w-1.5 rounded-full bg-white" />
+          <div className="absolute bottom-[2.5rem] left-[calc(50%+2px)] h-1.5 w-1.5 rounded-full bg-white" />
+          <div className="absolute bottom-5 left-[calc(50%+12px)] h-10 w-5 -rotate-[28deg] rounded-full bg-white/10" />
+        </div>
         {item.ropeType === 'chain' ? (
-          <div className="absolute left-1/2 top-[4rem] h-24 w-10 -translate-x-1/2">
+          <div className="absolute left-[143px] top-[60px] h-[5.5rem] w-16 -translate-x-1/2">
             {Array.from({ length: 5 }).map((_, index) => (
               <span
                 key={`chain-link-${index}`}
                 className="absolute left-1/2 h-4 w-3 -translate-x-1/2 rounded-full border border-amber-100/70 bg-transparent"
-                style={{ top: `${index * 15}px` }}
+                style={{ top: `${index * 14}px` }}
               />
             ))}
           </div>
         ) : null}
         {item.ropeType === 'braid' ? (
           <>
-            <div className="absolute left-[calc(50%-5px)] top-[3.9rem] h-20 w-1 rounded-full bg-cyan-100/65" />
-            <div className="absolute left-[calc(50%+3px)] top-[4.1rem] h-20 w-1 rounded-full bg-emerald-100/50" />
+            <div className="absolute left-[138px] top-[62px] h-20 w-1 rounded-full bg-cyan-100/70" />
+            <div className="absolute left-[146px] top-[66px] h-20 w-1 rounded-full bg-emerald-100/55" />
           </>
         ) : null}
-        {item.ropeType === 'silk' ? <div className="atlas-preview-glint absolute left-1/2 top-[4.8rem] h-10 w-14 -translate-x-1/2 rounded-full bg-white/25 blur-md" /> : null}
-        <div className="absolute bottom-6 left-4 rounded-full border border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-slate-100">
-          {ropeLabel}
-        </div>
-      </div>
+        {item.ropeType === 'silk' ? <div className="atlas-preview-glint absolute left-[70%] top-[46%] h-10 w-20 -translate-x-1/2 rounded-full bg-white/22 blur-md" /> : null}
+        {item.ropeType === 'reed' ? <div className="atlas-preview-glint absolute left-[70%] top-[48%] h-10 w-20 -translate-x-1/2 rounded-full bg-teal-200/22 blur-md" /> : null}
+        {item.ropeType === 'ember' ? <div className="atlas-preview-glint absolute left-[70%] top-[48%] h-10 w-20 -translate-x-1/2 rounded-full bg-orange-200/24 blur-md" /> : null}
+      </PreviewPosterFrame>
     );
   }
 
   if (item.upgradeKey === 'ropeLength' || item.upgradeKey === 'castRange') {
     return (
-      <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-        <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-        <div className="absolute left-1/2 top-4 h-5 w-5 -translate-x-1/2 rounded-full bg-cyan-200 shadow-lg shadow-cyan-500/30" />
-        <div
-          className="absolute left-1/2 top-8 w-1 -translate-x-1/2 rounded-full bg-cyan-100 transition-all duration-500"
-          style={{ height: `${72 + currentLevel * 12}px` }}
-        />
-        {commonMonkey}
-        <div className="absolute bottom-4 left-4 rounded-full border border-cyan-200/15 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
-          Wider catch window
+      <PreviewPosterFrame
+        item={item}
+        theme={theme}
+        statusLabel={statusLabel}
+        footerLabel="Wider catch window"
+        footerTone="border-cyan-200/15 bg-cyan-500/10 text-cyan-100"
+      >
+        <svg viewBox="0 0 320 192" className="absolute inset-0 h-full w-full">
+          <path d="M0 152C60 134 120 128 170 140C226 154 260 148 320 124V192H0Z" fill="rgba(15,23,42,0.88)" />
+          <path d="M54 40C98 42 154 64 226 74" stroke="#7dd3fc" strokeWidth="5" fill="none" strokeLinecap="round" />
+        </svg>
+        <div className="absolute left-[54px] top-[38px] h-3.5 w-3.5 rounded-full bg-cyan-100 shadow-[0_0_14px_rgba(125,211,252,0.45)]" />
+        <div className="atlas-preview-beacon absolute right-[54px] top-[58px] h-12 w-12 rounded-full border border-cyan-100/40 bg-cyan-200/10" />
+        <div className="absolute right-[67px] top-[71px] h-6 w-6 rounded-full border border-cyan-50/55 bg-cyan-100/20" />
+        <div className="absolute right-[73px] top-[77px] h-3 w-3 rounded-full bg-cyan-100 shadow-[0_0_16px_rgba(165,243,252,0.45)]" />
+        <div className="absolute left-[55%] top-[44%] h-16 w-16 -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute bottom-0 left-1/2 h-8 w-10 -translate-x-1/2 rounded-[45%_45%_28%_28%] bg-slate-950" />
+          <div className="absolute bottom-6 left-1/2 h-7 w-7 -translate-x-1/2 rounded-full border-[3px] border-white/90 bg-slate-700" />
         </div>
-      </div>
+      </PreviewPosterFrame>
     );
   }
 
   if (item.upgradeKey === 'swingForce' || item.upgradeKey === 'airControl' || item.upgradeKey === 'launchBoost') {
     return (
-      <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-        <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-        <div className="absolute left-1/2 top-5 h-4 w-4 -translate-x-1/2 rounded-full bg-emerald-200 shadow-lg shadow-emerald-500/40" />
-        <div className="absolute left-1/2 top-6 h-24 w-24 -translate-x-1/2 rounded-full border border-emerald-200/20 border-dashed" />
-        <div className="absolute bottom-10 left-1/2 h-14 w-14 -translate-x-1/2 rounded-full border-4 border-white bg-slate-700 animate-bounce-slow shadow-lg shadow-black/40" />
-        <div className="absolute bottom-4 left-4 rounded-full border border-emerald-200/15 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-100">
-          More speed through the arc
-        </div>
-      </div>
+      <PreviewPosterFrame
+        item={item}
+        theme={theme}
+        statusLabel={statusLabel}
+        footerLabel="More speed through the arc"
+        footerTone="border-emerald-200/15 bg-emerald-500/10 text-emerald-100"
+      >
+        <div className="absolute left-1/2 top-[44%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/12" />
+        <div className="absolute left-1/2 top-[44%] h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/25 border-dashed" />
+        <div className="absolute left-[30%] top-[38%] h-px w-16 rotate-[14deg] bg-emerald-100/45" />
+        <div className="absolute left-[36%] top-[48%] h-px w-14 rotate-[22deg] bg-emerald-100/32" />
+        <div className="absolute right-[30%] top-[34%] h-px w-12 -rotate-[20deg] bg-cyan-100/30" />
+        <PreviewFigure
+          headTone="bg-emerald-50"
+          bodyTone="bg-[linear-gradient(180deg,rgba(5,150,105,0.9),rgba(6,78,59,0.94))]"
+          maskTone="bg-slate-950/88"
+          accentTone="bg-cyan-300/55"
+          scarfTone="bg-emerald-200/75"
+          className="bottom-4"
+        />
+      </PreviewPosterFrame>
     );
   }
 
   if (item.upgradeKey === 'armor' || item.upgradeKey === 'hazardResist' || item.upgradeKey === 'safetyNet') {
     return (
-      <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-        <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-        <div className="absolute bottom-8 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full border-4 border-amber-200/50 bg-amber-300/10 shadow-lg shadow-amber-500/25 animate-pulse" />
-        {commonMonkey}
-        <div className="absolute bottom-4 left-4 rounded-full border border-amber-200/15 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
-          Safer hits and recoveries
-        </div>
-      </div>
+      <PreviewPosterFrame
+        item={item}
+        theme={theme}
+        statusLabel={statusLabel}
+        footerLabel="Safer hits and recoveries"
+        footerTone="border-amber-200/15 bg-amber-500/10 text-amber-100"
+      >
+        <div className="absolute bottom-6 left-[22%] h-10 w-10 rounded-[35%_65%_62%_38%] bg-rose-400/16" />
+        <div className="absolute bottom-8 left-[13%] h-5 w-5 rotate-[18deg] rounded-[45%_55%_55%_45%] bg-orange-300/18" />
+        <div className="absolute bottom-7 right-[18%] h-11 w-11 rounded-[58%_42%_40%_60%] bg-rose-400/14" />
+        <div className="absolute bottom-9 right-[10%] h-6 w-6 rotate-[20deg] rounded-[52%_48%_58%_42%] bg-orange-300/16" />
+        <div className="atlas-preview-shield absolute bottom-6 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full border-[3px] border-amber-200/42 bg-amber-200/6 shadow-[0_0_28px_rgba(251,191,36,0.15)]" />
+        <PreviewFigure
+          headTone="bg-amber-50"
+          bodyTone="bg-[linear-gradient(180deg,rgba(180,83,9,0.9),rgba(92,39,8,0.94))]"
+          maskTone="bg-slate-950/88"
+          accentTone="bg-amber-300/55"
+          scarfTone="bg-yellow-200/75"
+          className="bottom-4"
+        />
+      </PreviewPosterFrame>
     );
   }
 
   return (
-    <div className="relative h-44 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,25,0.95),rgba(10,20,20,0.88))]">
-      <div className={`absolute inset-x-6 top-4 h-24 rounded-full bg-gradient-to-r ${theme.glow} opacity-30 blur-2xl`} />
-      <ShopGlyph item={item} theme={theme} className="absolute left-4 top-4 h-12 w-12" size={24} />
-      {commonMonkey}
-      <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-slate-100">
-        {currentLevel > 0 ? `Level ${currentLevel}` : 'Preview'}
-      </div>
-    </div>
+    <PreviewPosterFrame
+      item={item}
+      theme={theme}
+      statusLabel={statusLabel}
+      footerLabel={currentLevel > 0 ? `Level ${currentLevel}` : 'Preview'}
+    >
+      <PreviewFigure
+        headTone={portraitTone.headTone}
+        bodyTone={portraitTone.bodyTone}
+        maskTone={portraitTone.maskTone}
+        accentTone={portraitTone.accentTone}
+        scarfTone={portraitTone.scarfTone}
+        className="bottom-4"
+      />
+    </PreviewPosterFrame>
   );
 }
 
@@ -324,8 +551,10 @@ export function ShopScreen({
   onBuyItem,
   onEquipSkin,
   onEquipRopeType,
+  onGrantTestWallet,
   initialSelectedItemId,
 }: Props) {
+  const isDev = import.meta.env.DEV;
   const filteredItems = useMemo(
     () =>
       shopItems.filter((item) =>
@@ -428,12 +657,48 @@ export function ShopScreen({
 
   const selectedState = selectedItem ? getItemState(selectedItem) : null;
   const selectedTheme = selectedItem ? getShopTheme(selectedItem) : null;
+  const tabMeta: Record<
+    Props['activeTab'],
+    {
+      label: string;
+      detail: string;
+      icon: typeof Zap;
+      tone: string;
+      idleTone: string;
+      count: number;
+    }
+  > = {
+    UPGRADES: {
+      label: 'Upgrades',
+      detail: 'Rope control, launch power, and survival tuning.',
+      icon: Zap,
+      tone: 'border-emerald-300/35 bg-emerald-500/14 text-emerald-100 shadow-lg shadow-emerald-950/20',
+      idleTone: 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-emerald-200/20 hover:bg-emerald-500/8',
+      count: shopItems.filter((item) => item.type === 'UPGRADE').length,
+    },
+    ROPES: {
+      label: 'Rope Types',
+      detail: 'Swap the feel of the line itself for different routes.',
+      icon: Feather,
+      tone: 'border-cyan-300/35 bg-cyan-500/14 text-cyan-100 shadow-lg shadow-cyan-950/20',
+      idleTone: 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-cyan-200/20 hover:bg-cyan-500/8',
+      count: shopItems.filter((item) => item.type === 'ROPE').length,
+    },
+    SKINS: {
+      label: 'Skins',
+      detail: 'Comic-book silhouettes, camp swagger, and route identity.',
+      icon: Shirt,
+      tone: 'border-amber-300/35 bg-amber-500/14 text-amber-100 shadow-lg shadow-amber-950/20',
+      idleTone: 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-amber-200/20 hover:bg-amber-500/8',
+      count: shopItems.filter((item) => item.type === 'SKIN').length,
+    },
+  };
 
   return (
-    <div data-ui-control className="absolute inset-0 z-50 bg-[radial-gradient(circle_at_top_left,rgba(73,124,76,0.22),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(170,120,54,0.16),transparent_30%),rgba(2,8,10,0.94)] p-4 font-ui">
-      <div className="relative flex h-full max-h-[92vh] w-full gap-4 overflow-hidden rounded-[2rem] atlas-surface-strong text-white">
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
+      <div data-ui-control className="absolute inset-0 z-50 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(73,124,76,0.22),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(170,120,54,0.16),transparent_30%),rgba(2,8,10,0.94)] p-3 font-ui sm:p-4">
+      <div className="relative mx-auto flex h-[calc(100svh-1.5rem)] w-full max-w-[1600px] flex-col gap-4 overflow-hidden rounded-[2rem] atlas-surface-strong text-white xl:flex-row">
+        <div className="min-w-0 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-5">
             <div className="flex items-center gap-4">
               <div className="atlas-surface-soft rounded-2xl p-3 text-emerald-200">
                 <ShoppingBag size={28} />
@@ -445,13 +710,22 @@ export function ShopScreen({
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className={`atlas-chip rounded-full px-4 py-2 transition-all ${purchaseReceipt ? 'border-amber-200/20 bg-amber-500/10 text-amber-100 shadow-lg shadow-amber-950/20' : 'text-white'}`}>
                 <span className="inline-flex items-center gap-2 text-lg font-bold">
                   <Coins className="text-amber-300" size={18} />
                   {saveData.totalTokens}
                 </span>
               </div>
+              {isDev && onGrantTestWallet ? (
+                <button
+                  type="button"
+                  onClick={onGrantTestWallet}
+                  className="rounded-full border border-emerald-200/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-100 transition-colors hover:bg-emerald-500/18"
+                >
+                  Test Wallet 5000
+                </button>
+              ) : null}
               {onReturnToMenu ? (
                 <button
                   onClick={onReturnToMenu}
@@ -466,53 +740,45 @@ export function ShopScreen({
             </div>
           </div>
 
-          <div className="border-b border-white/10 px-4 pt-4">
-            <div className="flex gap-3">
-              <button
-                onClick={() => onChangeTab('UPGRADES')}
-                className={`inline-flex items-center gap-2 rounded-t-2xl px-5 py-3 text-base font-bold transition-colors ${
-                  activeTab === 'UPGRADES'
-                    ? 'atlas-surface text-emerald-200'
-                    : 'bg-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Zap size={18} />
-                Upgrades
-              </button>
-              <button
-                onClick={() => onChangeTab('ROPES')}
-                className={`inline-flex items-center gap-2 rounded-t-2xl px-5 py-3 text-base font-bold transition-colors ${
-                  activeTab === 'ROPES'
-                    ? 'atlas-surface text-cyan-200'
-                    : 'bg-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Feather size={18} />
-                Rope Types
-              </button>
-              <button
-                onClick={() => onChangeTab('SKINS')}
-                className={`inline-flex items-center gap-2 rounded-t-2xl px-5 py-3 text-base font-bold transition-colors ${
-                  activeTab === 'SKINS'
-                    ? 'atlas-surface text-amber-200'
-                    : 'bg-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Shirt size={18} />
-                Skins
-              </button>
+          <div className="border-b border-white/10 px-4 py-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              {(['UPGRADES', 'ROPES', 'SKINS'] as const).map((tabKey) => {
+                const meta = tabMeta[tabKey];
+                const Icon = meta.icon;
+                const isActive = activeTab === tabKey;
+
+                return (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => onChangeTab(tabKey)}
+                    className={`rounded-[1.4rem] border px-4 py-4 text-left transition-all ${isActive ? meta.tone : meta.idleTone}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.05]">
+                        <Icon size={20} />
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-slate-950/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/72">
+                        {meta.count}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-lg font-black text-white">{meta.label}</div>
+                    <div className="mt-1 text-sm leading-relaxed text-slate-300">{meta.detail}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="h-[calc(100%-118px)] overflow-y-auto px-5 py-5">
+          <div className="atlas-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5">
             <div className="space-y-5">
               {availableGroups.length > 1 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {availableGroups.map((group) => (
                     <button
                       key={group}
                       onClick={() => setSelectedGroup(group)}
-                    className={`rounded-full px-3.5 py-2 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${
+                    className={`rounded-full px-4 py-2.5 text-sm font-bold uppercase tracking-[0.18em] transition-colors ${
                       selectedGroup === group
                           ? 'bg-emerald-300 text-slate-950 shadow-lg shadow-emerald-950/25'
                           : 'atlas-chip text-slate-300 hover:border-emerald-200/20 hover:bg-emerald-500/10 hover:text-white'
@@ -536,7 +802,7 @@ export function ShopScreen({
                   </div>
                 </div>
 
-                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
+                <div className="atlas-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 pr-2">
                   {browseItems.map((item) => {
                     const state = getItemState(item);
                     const theme = getShopTheme(item);
@@ -554,7 +820,7 @@ export function ShopScreen({
                           stopRecommendationPulse();
                           setSelectedItemId(item.id);
                         }}
-                        className={`relative w-[248px] snap-start shrink-0 rounded-[1.65rem] border p-4 text-left transition-all ${
+                        className={`relative w-[272px] snap-start shrink-0 rounded-[1.65rem] border p-4 text-left transition-all ${
                           isSelected
                             ? 'border-emerald-300/45 bg-emerald-500/14 shadow-lg shadow-emerald-950/25'
                             : 'border-white/8 bg-slate-900/72 hover:border-emerald-200/18 hover:bg-slate-900/88'
@@ -635,7 +901,7 @@ export function ShopScreen({
           </div>
         </div>
 
-        <div className="w-[360px] shrink-0 border-l border-white/8 bg-[linear-gradient(180deg,rgba(7,14,15,0.94),rgba(12,29,21,0.9))] p-4">
+        <div className="atlas-scroll min-h-0 max-h-[42svh] w-full shrink-0 overflow-y-auto border-t border-white/8 bg-[linear-gradient(180deg,rgba(7,14,15,0.94),rgba(12,29,21,0.9))] p-4 xl:max-h-none xl:w-[400px] xl:border-l xl:border-t-0">
           {selectedItem && selectedState ? (
             <div className="flex h-full flex-col gap-4">
               <div className="atlas-surface rounded-[1.7rem] p-4">

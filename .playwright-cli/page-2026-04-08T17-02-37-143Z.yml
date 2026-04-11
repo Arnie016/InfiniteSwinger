@@ -1,0 +1,89 @@
+- dialog "Camp Wakes First" [ref=e238]:
+  - generic:
+    - img
+  - generic [ref=e239]:
+    - banner [ref=e240]:
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - generic [ref=e243]:
+            - img [ref=e244]
+            - text: Story Map
+          - generic [ref=e246]: Beat 1/7
+          - generic [ref=e247]:
+            - img [ref=e248]
+            - text: FRAME 01
+        - generic [ref=e249]:
+          - button "Hide details" [active] [pressed] [ref=e326] [cursor=pointer]:
+            - img [ref=e327]
+            - text: Hide details
+          - generic [ref=e253]:
+            - img [ref=e254]
+            - text: Comic Motion
+      - generic [ref=e255]:
+        - generic [ref=e256]: Issue 01
+        - heading "Camp Wakes First" [level=2] [ref=e257]
+    - generic [ref=e259]:
+      - generic [ref=e260]:
+        - img [ref=e261]
+        - generic:
+          - generic: Scout
+          - generic:
+            - generic: Scout Nara
+            - generic:
+              - generic:
+                - img
+                - generic: First line
+        - generic:
+          - generic: Panel Caption
+          - generic: Push the camp deeper before the ash reaches the roots.
+        - generic:
+          - generic:
+            - generic:
+              - img
+              - generic: Arc keeper
+          - generic:
+            - generic:
+              - img
+              - generic: First line
+      - generic [ref=e286]:
+        - generic [ref=e287]: Narrative panel
+        - generic [ref=e290]:
+          - generic [ref=e328]:
+            - paragraph [ref=e329]: The camp hears the magma core before it sees it.
+            - paragraph [ref=e330]: The canopy is still safe here, but only barely.
+            - paragraph [ref=e331]: Your first clear pushes the rope line beyond the firelight.
+          - generic [ref=e332]: Level 1 is the first scouting swing.
+        - generic [ref=e293]: Beat map
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - generic [ref=e335]: Current camp focus
+            - generic [ref=e337]: camp-awakens
+          - generic [ref=e338]:
+            - generic [ref=e339]: Atlas lane
+            - generic [ref=e341]: jungle-camp
+          - generic [ref=e342]:
+            - generic [ref=e343]: Progress
+            - generic [ref=e345]: 14%
+    - contentinfo [ref=e294]:
+      - generic [ref=e295]:
+        - generic [ref=e296]:
+          - generic [ref=e297]: ← Back
+          - generic [ref=e298]: Enter / → Next
+          - generic [ref=e299]: Esc Skip
+          - generic [ref=e300]: M Menu
+        - generic [ref=e301]:
+          - button "Skip" [ref=e302] [cursor=pointer]:
+            - generic [ref=e303]:
+              - text: Skip
+              - img [ref=e304]
+          - button "Main Menu" [ref=e306] [cursor=pointer]:
+            - generic [ref=e307]:
+              - img [ref=e308]
+              - text: Main Menu
+        - button "Next panel" [ref=e311] [cursor=pointer]:
+          - generic [ref=e312]:
+            - text: Next panel
+            - img [ref=e313]
+      - generic [ref=e315]:
+        - generic [ref=e316]: Frame 1
+        - generic [ref=e325]: "Next: beat 2"

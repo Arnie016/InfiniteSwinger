@@ -1,0 +1,171 @@
+- generic [ref=e2012]:
+  - generic [ref=e2013]:
+    - generic [ref=e2014]:
+      - generic [ref=e2015]:
+        - img [ref=e2017]
+        - generic [ref=e2020]:
+          - generic [ref=e2021]: Canopy Bazaar
+          - heading "Monkey Market" [level=2] [ref=e2022]
+          - generic [ref=e2023]: Pick one card. The preview updates instantly.
+      - generic [ref=e2024]:
+        - generic [ref=e2026]:
+          - img [ref=e2027]
+          - text: "0"
+        - button "Test Wallet 5000" [ref=e2032] [cursor=pointer]
+        - button "Main Menu" [ref=e2033] [cursor=pointer]
+        - button [ref=e2034] [cursor=pointer]:
+          - img [ref=e2035]
+    - generic [ref=e2039]:
+      - button "13 Upgrades Rope control, launch power, and survival tuning." [ref=e2040] [cursor=pointer]:
+        - generic [ref=e2041]:
+          - img [ref=e2043]
+          - generic [ref=e2045]: "13"
+        - generic [ref=e2046]: Upgrades
+        - generic [ref=e2047]: Rope control, launch power, and survival tuning.
+      - button "6 Rope Types Swap the feel of the line itself for different routes." [ref=e2048] [cursor=pointer]:
+        - generic [ref=e2049]:
+          - img [ref=e2051]
+          - generic [ref=e2054]: "6"
+        - generic [ref=e2055]: Rope Types
+        - generic [ref=e2056]: Swap the feel of the line itself for different routes.
+      - button "7 Skins Comic-book silhouettes, camp swagger, and route identity." [ref=e2057] [cursor=pointer]:
+        - generic [ref=e2058]:
+          - img [ref=e2060]
+          - generic [ref=e2062]: "7"
+        - generic [ref=e2063]: Skins
+        - generic [ref=e2064]: Comic-book silhouettes, camp swagger, and route identity.
+    - generic [ref=e2066]:
+      - generic [ref=e2067]:
+        - button "Rope Control" [ref=e2068] [cursor=pointer]
+        - button "Launch & Recovery" [ref=e2069] [cursor=pointer]
+        - button "Survival & Utility" [ref=e2070] [cursor=pointer]
+      - generic [ref=e2071]:
+        - generic [ref=e2072]:
+          - generic [ref=e2073]:
+            - generic [ref=e2074]: Featured Lane
+            - generic [ref=e2075]: Rope Control
+            - generic [ref=e2076]: Pick one featured card, then buy or equip from the right.
+          - generic [ref=e2077]: 4 items
+        - generic [ref=e2078]:
+          - button "Recommended L1 / 5 Vine Weaver Rope Control Longer vines for deeper swings. Jungle openers Swamp recovery 50" [ref=e2079] [cursor=pointer]:
+            - generic:
+              - img
+              - text: Recommended
+            - generic [ref=e2080]:
+              - img [ref=e2084]
+              - generic [ref=e2089]: L1 / 5
+            - generic [ref=e2090]:
+              - generic [ref=e2091]: Vine Weaver
+              - generic [ref=e2092]: Rope Control
+            - generic [ref=e2093]: Longer vines for deeper swings.
+            - generic [ref=e2094]:
+              - generic [ref=e2095]:
+                - generic [ref=e2096]: Jungle openers
+                - generic [ref=e2097]: Swamp recovery
+              - generic [ref=e2098]: "50"
+          - button "L0 / 5 Long Cast Rope Control Reach wider anchors and easier recovery catches. Wide gaps Late recoveries 90" [ref=e2099] [cursor=pointer]:
+            - generic [ref=e2100]:
+              - img [ref=e2104]
+              - generic [ref=e2107]: L0 / 5
+            - generic [ref=e2108]:
+              - generic [ref=e2109]: Long Cast
+              - generic [ref=e2110]: Rope Control
+            - generic [ref=e2111]: Reach wider anchors and easier recovery catches.
+            - generic [ref=e2112]:
+              - generic [ref=e2113]:
+                - generic [ref=e2114]: Wide gaps
+                - generic [ref=e2115]: Late recoveries
+              - generic [ref=e2116]: "90"
+          - button "L0 / 5 Strong Grip Rope Control Ropes hold longer and pump harder. Cave forks Long hangs 140" [ref=e2117] [cursor=pointer]:
+            - generic [ref=e2118]:
+              - img [ref=e2122]
+              - generic [ref=e2128]: L0 / 5
+            - generic [ref=e2129]:
+              - generic [ref=e2130]: Strong Grip
+              - generic [ref=e2131]: Rope Control
+            - generic [ref=e2132]: Ropes hold longer and pump harder.
+            - generic [ref=e2133]:
+              - generic [ref=e2134]:
+                - generic [ref=e2135]: Cave forks
+                - generic [ref=e2136]: Long hangs
+              - generic [ref=e2137]: "140"
+          - button "L0 / 5 Branch Mastery Rope Control Branches hold longer when you reset on them. Branch lanes Checkpoint saves 180" [ref=e2138] [cursor=pointer]:
+            - generic [ref=e2139]:
+              - img [ref=e2143]
+              - generic [ref=e2147]: L0 / 5
+            - generic [ref=e2148]:
+              - generic [ref=e2149]: Branch Mastery
+              - generic [ref=e2150]: Rope Control
+            - generic [ref=e2151]: Branches hold longer when you reset on them.
+            - generic [ref=e2152]:
+              - generic [ref=e2153]:
+                - generic [ref=e2154]: Branch lanes
+                - generic [ref=e2155]: Checkpoint saves
+              - generic [ref=e2156]: "180"
+  - generic [ref=e2158]:
+    - generic [ref=e2159]:
+      - generic [ref=e2160]:
+        - img [ref=e2161]
+        - text: Featured
+      - generic [ref=e2164]:
+        - img [ref=e2169]
+        - img [ref=e2182]
+        - generic [ref=e2187]: L1
+        - generic [ref=e2188]: Wider catch window
+      - generic [ref=e2189]:
+        - generic [ref=e2190]:
+          - generic [ref=e2191]: Vine Weaver
+          - generic [ref=e2192]: Longer vines for deeper swings.
+        - generic [ref=e2193]: L1 / 5
+      - generic [ref=e2194]:
+        - generic [ref=e2195]:
+          - generic [ref=e2196]: "Current level: 1"
+          - generic [ref=e2197]: "After purchase: 2"
+        - generic [ref=e2198]:
+          - generic [ref=e2199]: Visible effect
+          - generic [ref=e2200]: Adds a larger vine harness ring around the monkey.
+        - generic [ref=e2201]:
+          - generic [ref=e2202]: Works well with
+          - generic [ref=e2203]: Pairs with Long Cast to widen retarget windows.
+        - generic [ref=e2204]:
+          - generic [ref=e2205]: Jungle openers
+          - generic [ref=e2206]: Swamp recovery
+      - button "Buy for 50" [disabled] [ref=e2208]
+    - generic [ref=e2209]:
+      - generic [ref=e2210]:
+        - generic [ref=e2211]:
+          - generic [ref=e2212]: Current Loadout
+          - generic [ref=e2213]: Trail Scout
+          - generic [ref=e2214]:
+            - img [ref=e2216]
+            - generic [ref=e2219]: Rope
+            - text: Classic Vine
+          - generic [ref=e2220]: Balanced sag, grip, and recovery.
+        - generic [ref=e2221]: Live
+      - generic [ref=e2222]:
+        - generic [ref=e2223]:
+          - generic [ref=e2224]:
+            - img [ref=e2226]
+            - generic [ref=e2230]: Rope
+          - generic [ref=e2233]:
+            - generic [ref=e2234]: Rope Length
+            - generic "Level 1 of 5" [ref=e2235]
+        - generic [ref=e2241]:
+          - generic [ref=e2242]:
+            - img [ref=e2244]
+            - generic [ref=e2247]: Launch
+          - generic [ref=e2250]:
+            - generic [ref=e2251]: Swing Force
+            - generic "Level 1 of 5" [ref=e2252]
+        - generic [ref=e2258]:
+          - generic [ref=e2259]:
+            - img [ref=e2261]
+            - generic [ref=e2263]: Survival
+          - generic [ref=e2266]:
+            - generic [ref=e2267]: Armor
+            - generic "Level 0 of 5" [ref=e2268]
+      - generic [ref=e2274]:
+        - generic [ref=e2275]: Route Fit
+        - generic [ref=e2276]:
+          - generic [ref=e2277]: Open canopy catches improved
+          - generic [ref=e2278]: Starter speed lines feel cleaner

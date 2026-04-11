@@ -75,7 +75,7 @@ export const STORY_SCENE_PALETTE: Record<
   },
 };
 
-export const STORY_CAST_ORDER: StoryCastId[] = ['nara', 'ivo', 'pell', 'suri', 'lyra', 'kellan', 'chorus'];
+export const STORY_CAST_ORDER: StoryCastId[] = ['nara', 'ivo', 'pell', 'suri', 'lyra', 'kellan', 'relay', 'chorus'];
 
 export const STORY_CAST: Record<StoryCastId, StoryCharacterProfile> = {
   nara: {
@@ -181,6 +181,21 @@ export const STORY_CAST: Record<StoryCastId, StoryCharacterProfile> = {
       secondary: '#11313b',
       accent: '#e0f7ff',
       glow: 'rgba(103, 232, 249, 0.3)',
+    },
+  },
+  relay: {
+    id: 'relay',
+    name: 'Relay Vale',
+    callSign: 'Live wire',
+    role: 'Board courier',
+    shortBio: 'Carries imported runboards through the ashline and turns rival lines into the next chase target.',
+    signatureMove: 'Broadcasts the next route before the dust settles.',
+    homeScene: 'magma',
+    palette: {
+      primary: '#67e8f9',
+      secondary: '#123344',
+      accent: '#eff6ff',
+      glow: 'rgba(103,232,249,0.32)',
     },
   },
 };

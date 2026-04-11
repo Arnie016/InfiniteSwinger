@@ -743,8 +743,8 @@ export function EndRunModal({
     : '';
 
   return (
-    <div data-ui-control className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/82 px-4 backdrop-blur-sm">
-      <div className={`atlas-surface-strong relative w-full max-w-4xl overflow-hidden rounded-[2rem] p-6 text-white md:p-8 ${isVictory ? 'shadow-2xl shadow-emerald-950/40' : 'shadow-2xl shadow-black/40'}`}>
+    <div data-ui-control className="absolute inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/82 px-4 py-4 backdrop-blur-sm sm:items-center">
+      <div className={`atlas-surface-strong relative my-auto flex h-[calc(100svh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] p-5 text-white md:p-7 ${isVictory ? 'shadow-2xl shadow-emerald-950/40' : 'shadow-2xl shadow-black/40'}`}>
         <div
           className={`absolute inset-x-0 top-0 h-36 ${
             isVictory
@@ -752,7 +752,7 @@ export function EndRunModal({
               : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent)]'
           }`}
         />
-        <div className="relative">
+        <div className="relative flex min-h-0 flex-1 flex-col">
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className={`atlas-map-label text-xs ${isVictory ? 'text-emerald-200/70' : 'text-rose-200/70'}`}>
@@ -781,32 +781,33 @@ export function EndRunModal({
             {selectedLevel.description}
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-4">
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Score</div>
-              <div className="mt-2 text-3xl font-black text-amber-200">{score}</div>
-            </div>
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Distance</div>
-              <div className="mt-2 text-3xl font-black text-sky-200">{distance}m</div>
-            </div>
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Banked</div>
-              <div className="mt-2 text-3xl font-black text-emerald-300">{runTokens}</div>
-            </div>
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Route Record</div>
-              <div className="mt-2 text-3xl font-black text-white">{routeBestScore}</div>
-              <div className="mt-1 text-xs text-slate-400">
-                {routeScoreImproved ? `+${score - previousBestScore} this run` : `Global best ${bestScore}`}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="atlas-surface-soft rounded-2xl p-4">
+                <div className="atlas-map-label text-xs text-slate-400">Score</div>
+                <div className="mt-2 text-3xl font-black text-amber-200">{score}</div>
+              </div>
+              <div className="atlas-surface-soft rounded-2xl p-4">
+                <div className="atlas-map-label text-xs text-slate-400">Distance</div>
+                <div className="mt-2 text-3xl font-black text-sky-200">{distance}m</div>
+              </div>
+              <div className="atlas-surface-soft rounded-2xl p-4">
+                <div className="atlas-map-label text-xs text-slate-400">Banked</div>
+                <div className="mt-2 text-3xl font-black text-emerald-300">{runTokens}</div>
+              </div>
+              <div className="atlas-surface-soft rounded-2xl p-4">
+                <div className="atlas-map-label text-xs text-slate-400">Route Record</div>
+                <div className="mt-2 text-3xl font-black text-white">{routeBestScore}</div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {routeScoreImproved ? `+${score - previousBestScore} this run` : `Global best ${bestScore}`}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr),280px]">
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Route Rating</div>
-              <div className="mt-3 flex items-center gap-2 text-amber-200">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr),280px]">
+              <div className="atlas-surface-soft rounded-2xl p-4">
+                <div className="atlas-map-label text-xs text-slate-400">Route Rating</div>
+                <div className="mt-3 flex items-center gap-2 text-amber-200">
                 {[0, 1, 2].map((index) => (
                   <Star key={index} size={32} fill={index < starCount ? 'currentColor' : 'none'} />
                 ))}
@@ -996,274 +997,275 @@ export function EndRunModal({
                     </div>
                   </>
                 ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr),320px]">
-            <div className="atlas-surface-soft rounded-2xl p-4">
-              <div className="atlas-map-label text-xs text-slate-400">Run Debrief</div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Peak Speed</div>
-                  <div className="mt-2 text-2xl font-black text-cyan-200">{runDebrief.peakSpeed.toFixed(1)}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Combo Peak</div>
-                  <div className="mt-2 text-2xl font-black text-amber-200">x{runDebrief.maxComboMultiplier.toFixed(1)}</div>
-                  <div className="text-xs text-slate-400">{runDebrief.maxComboRank}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Redeploys</div>
-                  <div className="mt-2 text-2xl font-black text-emerald-200">{runDebrief.redeploys}</div>
-                  <div className="text-xs text-slate-400">{runDebrief.checkpointsSecured} checkpoints secured</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Token Pace</div>
-                  <div className="mt-2 text-2xl font-black text-fuchsia-200">{tokensPer100m}</div>
-                  <div className="text-xs text-slate-400">per 100m</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Hazard Hits</div>
-                  <div className="mt-2 text-2xl font-black text-rose-200">{runDebrief.hazardHits}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Jumps Used</div>
-                  <div className="mt-2 text-2xl font-black text-violet-200">{runDebrief.jumpsUsed}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                  <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Safety Net</div>
-                  <div className={`mt-2 text-2xl font-black ${runDebrief.usedSafetyNet ? 'text-lime-200' : 'text-slate-200'}`}>
-                    {runDebrief.usedSafetyNet ? 'Spent' : 'Held'}
-                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr),320px]">
               <div className="atlas-surface-soft rounded-2xl p-4">
-                <div className="atlas-map-label text-xs text-slate-400">Coach Notes</div>
-                <div className="mt-3 space-y-2 text-sm text-slate-200">
-                  {debriefNotes.map((note) => (
-                    <div key={note} className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5">
-                      {note}
+                <div className="atlas-map-label text-xs text-slate-400">Run Debrief</div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Peak Speed</div>
+                    <div className="mt-2 text-2xl font-black text-cyan-200">{runDebrief.peakSpeed.toFixed(1)}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Combo Peak</div>
+                    <div className="mt-2 text-2xl font-black text-amber-200">x{runDebrief.maxComboMultiplier.toFixed(1)}</div>
+                    <div className="text-xs text-slate-400">{runDebrief.maxComboRank}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Redeploys</div>
+                    <div className="mt-2 text-2xl font-black text-emerald-200">{runDebrief.redeploys}</div>
+                    <div className="text-xs text-slate-400">{runDebrief.checkpointsSecured} checkpoints secured</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Token Pace</div>
+                    <div className="mt-2 text-2xl font-black text-fuchsia-200">{tokensPer100m}</div>
+                    <div className="text-xs text-slate-400">per 100m</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Hazard Hits</div>
+                    <div className="mt-2 text-2xl font-black text-rose-200">{runDebrief.hazardHits}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Jumps Used</div>
+                    <div className="mt-2 text-2xl font-black text-violet-200">{runDebrief.jumpsUsed}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Safety Net</div>
+                    <div className={`mt-2 text-2xl font-black ${runDebrief.usedSafetyNet ? 'text-lime-200' : 'text-slate-200'}`}>
+                      {runDebrief.usedSafetyNet ? 'Spent' : 'Held'}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
 
-              {recommendedUpgrade ? (
+              <div className="space-y-4">
                 <div className="atlas-surface-soft rounded-2xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="atlas-map-label text-xs text-slate-400">Camp Upgrade</div>
-                      <div className="mt-2 text-lg font-black text-white">{recommendedUpgrade.item.name}</div>
-                    </div>
-                    <div
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${
-                        recommendedUpgrade.missingParents.length > 0
-                          ? 'border-rose-200/20 bg-rose-500/10 text-rose-100'
-                          : recommendedUpgrade.isAffordable
-                          ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
-                          : 'border-amber-200/20 bg-amber-500/10 text-amber-100'
-                      }`}
-                    >
-                      {recommendedUpgrade.missingParents.length > 0
-                        ? 'Locked'
-                        : recommendedUpgrade.isAffordable
-                        ? 'Buy Now'
-                        : `Save ${recommendedUpgrade.tokensShort}`}
-                    </div>
+                  <div className="atlas-map-label text-xs text-slate-400">Coach Notes</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-200">
+                    {debriefNotes.map((note) => (
+                      <div key={note} className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5">
+                        {note}
+                      </div>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="mt-3 flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
-                    {RecommendedIcon ? (
-                      <div className="rounded-2xl border border-cyan-200/15 bg-cyan-500/10 p-2 text-cyan-100">
-                        <RecommendedIcon size={18} />
+                {recommendedUpgrade ? (
+                  <div className="atlas-surface-soft rounded-2xl p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="atlas-map-label text-xs text-slate-400">Camp Upgrade</div>
+                        <div className="mt-2 text-lg font-black text-white">{recommendedUpgrade.item.name}</div>
+                      </div>
+                      <div
+                        className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${
+                          recommendedUpgrade.missingParents.length > 0
+                            ? 'border-rose-200/20 bg-rose-500/10 text-rose-100'
+                            : recommendedUpgrade.isAffordable
+                            ? 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100'
+                            : 'border-amber-200/20 bg-amber-500/10 text-amber-100'
+                        }`}
+                      >
+                        {recommendedUpgrade.missingParents.length > 0
+                          ? 'Locked'
+                          : recommendedUpgrade.isAffordable
+                          ? 'Buy Now'
+                          : `Save ${recommendedUpgrade.tokensShort}`}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3">
+                      {RecommendedIcon ? (
+                        <div className="rounded-2xl border border-cyan-200/15 bg-cyan-500/10 p-2 text-cyan-100">
+                          <RecommendedIcon size={18} />
+                        </div>
+                      ) : null}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm leading-relaxed text-slate-200">
+                          {recommendedUpgrade.reason.charAt(0).toUpperCase() + recommendedUpgrade.reason.slice(1)}.
+                        </div>
+                        <div className="mt-2 text-xs leading-relaxed text-slate-400">
+                          {recommendedUpgrade.item.synergyText ?? recommendedUpgrade.item.description}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
+                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Cost</div>
+                        <div className="mt-1 text-base font-black text-amber-200">{recommendedUpgrade.item.cost}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
+                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Owned</div>
+                        <div className="mt-1 text-base font-black text-cyan-200">Lv {recommendedUpgrade.currentLevel}</div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
+                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Wallet</div>
+                        <div className="mt-1 text-base font-black text-emerald-200">{saveData.totalTokens}</div>
+                      </div>
+                    </div>
+
+                    {recommendedUpgrade.parentNames.length > 0 ? (
+                      <div className="mt-3 rounded-2xl border border-rose-200/12 bg-rose-500/8 px-3 py-2.5 text-sm text-rose-100">
+                        Unlock path first: {recommendedUpgrade.parentNames.join(' + ')}.
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-sm text-slate-300">
+                        {recommendedUpgrade.isAffordable
+                          ? 'This is the cleanest immediate buy from the run you just had.'
+                          : `One more run at this payout pace can close the remaining ${recommendedUpgrade.tokensShort} tokens.`}
+                      </div>
+                    )}
+
+                    {onOpenShopForUpgrade ? (
+                      <button
+                        onClick={handleOpenShopForUpgrade}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-emerald-500/15 py-3 text-sm font-black text-white transition-all hover:-translate-y-0.5"
+                      >
+                        <ShoppingBag size={16} />
+                        Open in Market
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {recommendationDiagnostics && recommendationDiagnostics.offers > 0 ? (
+                  <div className="atlas-surface-soft rounded-2xl p-4">
+                    <div className="atlas-map-label text-xs text-slate-400">Run Coach Signal</div>
+                    <div className="mt-2 text-lg font-black text-white">Recommendation conversion</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2">
+                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Open Rate</div>
+                        <div className="mt-1 text-base font-black text-emerald-200">
+                          {recommendationDiagnostics.offers === 0
+                            ? '0%'
+                            : `${Math.round((recommendationDiagnostics.opens / recommendationDiagnostics.offers) * 100)}%`}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2">
+                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Buy Rate</div>
+                        <div className="mt-1 text-base font-black text-amber-200">
+                          {recommendationDiagnostics.acceptanceRate}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
+                      {recommendationDiagnostics.avgOpenDelaySeconds === null
+                        ? 'Open latency is tracked from recommendation to first market view.'
+                        : `Avg open latency: ${recommendationDiagnostics.avgOpenDelaySeconds}s`}
+                    </div>
+                    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
+                      {recommendationDiagnostics.avgOpenToBuySeconds === null
+                        ? 'Open-to-buy latency tracks purchases from market open.'
+                        : `Avg open-to-buy time: ${recommendationDiagnostics.avgOpenToBuySeconds}s`}
+                    </div>
+                    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
+                      {recommendationDiagnostics.avgSkipDelaySeconds === null
+                        ? 'Skip latency tracks time from recommendation to close/action skip.'
+                        : `Avg skip latency: ${recommendationDiagnostics.avgSkipDelaySeconds}s`}
+                    </div>
+                    <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
+                      {`Recent skip pool: ${recommendationDiagnostics.skips} / ${recommendationDiagnostics.offers} recommendations`}
+                    </div>
+                    {recommendationTrend ? (
+                      <div className="mt-4 space-y-2">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                          7-Run Rolling Trend
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
+                          <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
+                            Overall and outcome-split sample sizes
+                          </div>
+                          <div className="mt-1 grid grid-cols-2 gap-2 text-center">
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.14em] text-amber-200/80">
+                                {formatTrendSummaryRuns('Overall', recommendationTrend.rolling.all)}
+                              </div>
+                              <div className="mt-1 text-xs uppercase tracking-[0.14em] text-amber-200/90">Open</div>
+                              <div className="text-sm font-black text-amber-100">
+                                {recommendationTrend.rolling.all.openRatePercent === null
+                                  ? '—'
+                                  : `${recommendationTrend.rolling.all.openRatePercent}%`}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.14em] text-emerald-200/90">
+                                {formatTrendSummaryRuns('Buy', recommendationTrend.rolling.all)}
+                              </div>
+                              <div className="mt-1 text-xs uppercase tracking-[0.14em] text-emerald-200/90">Buy</div>
+                              <div className="text-sm font-black text-emerald-100">
+                                {recommendationTrend.rolling.all.buyRatePercent === null
+                                  ? '—'
+                                  : `${recommendationTrend.rolling.all.buyRatePercent}%`}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
+                            <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
+                              {formatTrendSummaryRuns('Wins', recommendationTrend.rolling.win)}
+                            </div>
+                            <div className="mt-1 text-xs text-emerald-200">Open {recommendationTrend.rolling.win.openRatePercent ?? '—'}%</div>
+                            <div className="text-xs text-emerald-200">Buy {recommendationTrend.rolling.win.buyRatePercent ?? '—'}%</div>
+                          </div>
+                          <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
+                            <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
+                              {formatTrendSummaryRuns('Fails', recommendationTrend.rolling.fail)}
+                            </div>
+                            <div className="mt-1 text-xs text-amber-200">Open {recommendationTrend.rolling.fail.openRatePercent ?? '—'}%</div>
+                            <div className="text-xs text-amber-200">Buy {recommendationTrend.rolling.fail.buyRatePercent ?? '—'}%</div>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2 text-xs text-slate-300">
+                          <div>
+                            {`Current run: open ${recommendationTrend.current.openRatePercent ?? 0}% | buy ${recommendationTrend.current.buyRatePercent ?? 0}%`}
+                          </div>
+                          <div>
+                            {recommendationTrend.priorRuns > 0
+                              ? `Open trend: ${getTrendDeltaText(
+                                  recommendationTrend.rolling.all.openRatePercent,
+                                  recommendationTrend.prior?.all.openRatePercent ?? null,
+                                )}`
+                              : 'Need two full windows for open-rate trend'}
+                          </div>
+                          <div>
+                            {recommendationTrend.priorRuns > 0
+                              ? `Buy trend: ${getTrendDeltaText(
+                                  recommendationTrend.rolling.all.buyRatePercent,
+                                  recommendationTrend.prior?.all.buyRatePercent ?? null,
+                                )}`
+                              : 'Need two full windows for buy-rate trend'}
+                          </div>
+                          {recommendationTrend.priorWinRuns > 0 ? (
+                            <div>
+                              {`Wins trend: ${getTrendDeltaText(
+                                recommendationTrend.rolling.win.openRatePercent,
+                                recommendationTrend.prior?.win.openRatePercent ?? null,
+                              )}`}
+                            </div>
+                          ) : null}
+                          {recommendationTrend.priorFailRuns > 0 ? (
+                            <div>
+                              {`Fails trend: ${getTrendDeltaText(
+                                recommendationTrend.rolling.fail.buyRatePercent,
+                                recommendationTrend.prior?.fail.buyRatePercent ?? null,
+                              )}`}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     ) : null}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm leading-relaxed text-slate-200">
-                        {recommendedUpgrade.reason.charAt(0).toUpperCase() + recommendedUpgrade.reason.slice(1)}.
-                      </div>
-                      <div className="mt-2 text-xs leading-relaxed text-slate-400">
-                        {recommendedUpgrade.item.synergyText ?? recommendedUpgrade.item.description}
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Cost</div>
-                      <div className="mt-1 text-base font-black text-amber-200">{recommendedUpgrade.item.cost}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Owned</div>
-                      <div className="mt-1 text-base font-black text-cyan-200">Lv {recommendedUpgrade.currentLevel}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2.5">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Wallet</div>
-                      <div className="mt-1 text-base font-black text-emerald-200">{saveData.totalTokens}</div>
-                    </div>
-                  </div>
-
-                  {recommendedUpgrade.parentNames.length > 0 ? (
-                    <div className="mt-3 rounded-2xl border border-rose-200/12 bg-rose-500/8 px-3 py-2.5 text-sm text-rose-100">
-                      Unlock path first: {recommendedUpgrade.parentNames.join(' + ')}.
-                    </div>
-                  ) : (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-sm text-slate-300">
-                      {recommendedUpgrade.isAffordable
-                        ? 'This is the cleanest immediate buy from the run you just had.'
-                        : `One more run at this payout pace can close the remaining ${recommendedUpgrade.tokensShort} tokens.`}
-                    </div>
-                  )}
-
-                  {onOpenShopForUpgrade ? (
-                    <button
-                      onClick={handleOpenShopForUpgrade}
-                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-emerald-500/15 py-3 text-sm font-black text-white transition-all hover:-translate-y-0.5"
-                    >
-                      <ShoppingBag size={16} />
-                      Open in Market
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {recommendationDiagnostics && recommendationDiagnostics.offers > 0 ? (
-                <div className="atlas-surface-soft rounded-2xl p-4">
-                  <div className="atlas-map-label text-xs text-slate-400">Run Coach Signal</div>
-                  <div className="mt-2 text-lg font-black text-white">Recommendation conversion</div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Open Rate</div>
-                      <div className="mt-1 text-base font-black text-emerald-200">
-                        {recommendationDiagnostics.offers === 0
-                          ? '0%'
-                          : `${Math.round((recommendationDiagnostics.opens / recommendationDiagnostics.offers) * 100)}%`}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Buy Rate</div>
-                      <div className="mt-1 text-base font-black text-amber-200">
-                        {recommendationDiagnostics.acceptanceRate}%
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
-                    {recommendationDiagnostics.avgOpenDelaySeconds === null
-                      ? 'Open latency is tracked from recommendation to first market view.'
-                      : `Avg open latency: ${recommendationDiagnostics.avgOpenDelaySeconds}s`}
-                  </div>
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
-                    {recommendationDiagnostics.avgOpenToBuySeconds === null
-                      ? 'Open-to-buy latency tracks purchases from market open.'
-                      : `Avg open-to-buy time: ${recommendationDiagnostics.avgOpenToBuySeconds}s`}
-                  </div>
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
-                    {recommendationDiagnostics.avgSkipDelaySeconds === null
-                      ? 'Skip latency tracks time from recommendation to close/action skip.'
-                      : `Avg skip latency: ${recommendationDiagnostics.avgSkipDelaySeconds}s`}
-                  </div>
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2.5 text-xs text-slate-300">
-                    {`Recent skip pool: ${recommendationDiagnostics.skips} / ${recommendationDiagnostics.offers} recommendations`}
-                  </div>
-                  {recommendationTrend ? (
-                    <div className="mt-4 space-y-2">
-                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                        7-Run Rolling Trend
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
-                        <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
-                          Overall and outcome-split sample sizes
-                        </div>
-                        <div className="mt-1 grid grid-cols-2 gap-2 text-center">
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.14em] text-amber-200/80">
-                              {formatTrendSummaryRuns('Overall', recommendationTrend.rolling.all)}
-                            </div>
-                            <div className="mt-1 text-xs uppercase tracking-[0.14em] text-amber-200/90">Open</div>
-                            <div className="text-sm font-black text-amber-100">
-                              {recommendationTrend.rolling.all.openRatePercent === null
-                                ? '—'
-                                : `${recommendationTrend.rolling.all.openRatePercent}%`}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.14em] text-emerald-200/90">
-                              {formatTrendSummaryRuns('Buy', recommendationTrend.rolling.all)}
-                            </div>
-                            <div className="mt-1 text-xs uppercase tracking-[0.14em] text-emerald-200/90">Buy</div>
-                            <div className="text-sm font-black text-emerald-100">
-                              {recommendationTrend.rolling.all.buyRatePercent === null
-                                ? '—'
-                                : `${recommendationTrend.rolling.all.buyRatePercent}%`}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
-                          <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
-                            {formatTrendSummaryRuns('Wins', recommendationTrend.rolling.win)}
-                          </div>
-                          <div className="mt-1 text-xs text-emerald-200">Open {recommendationTrend.rolling.win.openRatePercent ?? '—'}%</div>
-                          <div className="text-xs text-emerald-200">Buy {recommendationTrend.rolling.win.buyRatePercent ?? '—'}%</div>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-2 py-2 text-center">
-                          <div className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
-                            {formatTrendSummaryRuns('Fails', recommendationTrend.rolling.fail)}
-                          </div>
-                          <div className="mt-1 text-xs text-amber-200">Open {recommendationTrend.rolling.fail.openRatePercent ?? '—'}%</div>
-                          <div className="text-xs text-amber-200">Buy {recommendationTrend.rolling.fail.buyRatePercent ?? '—'}%</div>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-2 text-xs text-slate-300">
-                        <div>
-                          {`Current run: open ${recommendationTrend.current.openRatePercent ?? 0}% | buy ${recommendationTrend.current.buyRatePercent ?? 0}%`}
-                        </div>
-                        <div>
-                          {recommendationTrend.priorRuns > 0
-                            ? `Open trend: ${getTrendDeltaText(
-                                recommendationTrend.rolling.all.openRatePercent,
-                                recommendationTrend.prior?.all.openRatePercent ?? null,
-                              )}`
-                            : 'Need two full windows for open-rate trend'}
-                        </div>
-                        <div>
-                          {recommendationTrend.priorRuns > 0
-                            ? `Buy trend: ${getTrendDeltaText(
-                                recommendationTrend.rolling.all.buyRatePercent,
-                                recommendationTrend.prior?.all.buyRatePercent ?? null,
-                              )}`
-                            : 'Need two full windows for buy-rate trend'}
-                        </div>
-                        {recommendationTrend.priorWinRuns > 0 ? (
-                          <div>
-                            {`Wins trend: ${getTrendDeltaText(
-                              recommendationTrend.rolling.win.openRatePercent,
-                              recommendationTrend.prior?.win.openRatePercent ?? null,
-                            )}`}
-                          </div>
-                        ) : null}
-                        {recommendationTrend.priorFailRuns > 0 ? (
-                          <div>
-                            {`Fails trend: ${getTrendDeltaText(
-                              recommendationTrend.rolling.fail.buyRatePercent,
-                              recommendationTrend.prior?.fail.buyRatePercent ?? null,
-                            )}`}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </div>
 
-          <div className={`mt-6 grid gap-3 ${isVictory && hasNextUnlockedLevel ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+          <div className={`mt-5 grid gap-3 ${isVictory && hasNextUnlockedLevel ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'}`}>
             <button
               onClick={onRetry}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-500/12 py-4 text-lg font-black text-white transition-all hover:-translate-y-0.5"

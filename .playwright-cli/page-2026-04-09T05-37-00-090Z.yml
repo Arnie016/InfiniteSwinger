@@ -1,0 +1,237 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Campaign Comic
+      - generic [ref=e10]: Drag the atlas to scout ahead
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Issue Zero • Rope Before Fire
+        - heading "Infinite Swinger" [level=1] [ref=e14]:
+          - text: Infinite
+          - text: Swinger
+        - paragraph [ref=e15]: A crew-on-the-run jungle comic where each route is a playable panel. Build momentum, choose safer or greedier lines, and carry the run all the way into the magma frontier.
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: Progress
+            - generic [ref=e19]: L12
+            - generic [ref=e20]: Current atlas reach
+          - generic [ref=e21]:
+            - generic [ref=e22]: Loop
+            - generic [ref=e23]: Route. Upgrade. Rival.
+            - generic [ref=e24]: Every clear feeds the next push
+          - generic [ref=e25]:
+            - generic [ref=e26]: Finale
+            - generic [ref=e27]: Aether Bastion
+            - generic [ref=e28]: The atlas endgame route
+        - generic [ref=e29]:
+          - button "Play Atlas" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - img [ref=e32]
+              - text: Play Atlas
+              - img [ref=e34]
+          - button "Open Story Map" [ref=e36] [cursor=pointer]:
+            - generic [ref=e37]:
+              - img [ref=e38]
+              - text: Open Story Map
+        - generic [ref=e40]:
+          - generic [ref=e41]: Tour cleared
+          - generic [ref=e42]: Double click a route node to launch fast
+      - generic [ref=e44]:
+        - generic [ref=e46]:
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - generic:
+              - generic: Issue 01
+              - generic: Scout Nara
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: First line
+              - generic:
+                - generic:
+                  - img
+                  - generic: Arc keeper
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Forward scout
+              - generic: Camp Wakes First
+              - generic: Push the camp deeper before the ash reaches the roots.
+              - generic: Fast first mark on a fresh route.
+          - generic [ref=e70]:
+            - img [ref=e71]
+            - generic:
+              - generic: Issue 02
+              - generic: Rope Chief Ivo
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Arc keeper
+              - generic:
+                - generic:
+                  - img
+                  - generic: First line
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Swing coach
+              - generic: Catch The Rhythm
+              - generic: Feel the arc first. Speed comes after.
+              - generic: Clean recovery chains through bad weather.
+          - generic [ref=e92]:
+            - img [ref=e93]
+            - generic:
+              - generic: Issue 03
+              - generic: Quartermaster Pell
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Greed meter
+              - generic:
+                - generic:
+                  - img
+                  - generic: Arc keeper
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Upgrade broker
+              - generic: Read The Water
+              - generic: Greed buys upgrades. Discipline keeps the run alive.
+              - generic: Reward-route planning and loadout pivots.
+          - generic [ref=e114]:
+            - img [ref=e115]
+            - generic:
+              - generic: Issue 04
+              - generic: Trail Warden Suri
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Trap reader
+              - generic:
+                - generic:
+                  - img
+                  - generic: Greed meter
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Hazard pathfinder
+              - generic: The Valley Bites Back
+              - generic: If the route looks loud, the trap is already armed.
+              - generic: Late-route hazard reads without dropping pace.
+          - generic [ref=e136]:
+            - img [ref=e137]
+            - generic:
+              - generic: Issue 05
+              - generic: Camp Chorus
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Final push
+              - generic:
+                - generic:
+                  - img
+                  - generic: Trap reader
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Crew rally
+              - generic: Race The Core
+              - generic: Bring the whole loadout. The mountain is awake.
+              - generic: Frontier morale and finale pressure.
+          - generic [ref=e158]:
+            - img [ref=e159]
+            - generic:
+              - generic: Issue 06
+              - generic: Skywarden Lyra
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Wind seam
+              - generic:
+                - generic:
+                  - img
+                  - generic: Final push
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Crown pathguide
+              - generic: The Crown of Wind
+              - generic: Do not chase the obvious line; steal the clean line.
+              - generic: Micro-adjusting arc into narrow wind windows.
+          - generic [ref=e180]:
+            - img [ref=e181]
+            - generic:
+              - generic: Issue 07
+              - generic: Aster Kellan
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - generic: Aerial cartographer
+              - generic:
+                - generic:
+                  - img
+                  - generic: Wind seam
+            - generic:
+              - generic:
+                - generic: Comic Panel
+                - generic: Wind atlas keeper
+              - generic: The Aether Crest
+              - generic: Read the wind, then cut the rope like a metronome.
+              - generic: Turn weather maps into clean release windows.
+        - generic [ref=e201]:
+          - generic [ref=e202]:
+            - button "Previous story issue" [ref=e203] [cursor=pointer]:
+              - img [ref=e204]
+            - button "Next story issue" [ref=e206] [cursor=pointer]:
+              - img [ref=e207]
+          - generic [ref=e209]:
+            - button "Select issue Issue 01" [ref=e210] [cursor=pointer]
+            - button "Select issue Issue 02" [ref=e211] [cursor=pointer]
+            - button "Select issue Issue 03" [ref=e212] [cursor=pointer]
+            - button "Select issue Issue 04" [ref=e213] [cursor=pointer]
+            - button "Select issue Issue 05" [ref=e214] [cursor=pointer]
+            - button "Select issue Issue 06" [ref=e215] [cursor=pointer]
+            - button "Select issue Issue 07" [ref=e216] [cursor=pointer]
+          - generic [ref=e217]: Finale unlocked
+  - generic [ref=e218]:
+    - generic [ref=e219]:
+      - generic [ref=e220]:
+        - generic [ref=e221]: How The Run Feels
+        - img [ref=e222]
+      - generic [ref=e225]:
+        - generic [ref=e226]:
+          - img [ref=e227]
+          - text: "Hold `E` or mouse to latch and keep your line alive."
+        - generic [ref=e233]:
+          - img [ref=e234]
+          - text: "`D` drives forward, `A` brakes and resets a bad angle."
+        - generic [ref=e238]:
+          - img [ref=e239]
+          - text: "`Space` jumps, `W` and `S` tune rope length mid-air."
+    - generic [ref=e243]:
+      - generic [ref=e244]:
+        - generic [ref=e245]: Atlas at a glance
+        - generic [ref=e246]: Tour cleared
+      - generic [ref=e247]:
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - img [ref=e250]
+            - text: Early Goal
+          - generic [ref=e252]: Clear the first tour beats, unlock the full atlas, and start banking clean route clears for upgrades and leaderboard pushes.
+        - generic [ref=e253]:
+          - generic [ref=e254]:
+            - img [ref=e255]
+            - text: Story Shape
+          - generic [ref=e257]: Each region is framed like a comic beat now, so the campaign feels like a chase across the map instead of a plain level list.
+        - generic [ref=e258]:
+          - generic [ref=e259]:
+            - img [ref=e260]
+            - text: Late Threat
+          - generic [ref=e262]: Rival boards, harder branches, and the magma routes turn the late game into a consistency check instead of a single lucky run.

@@ -1,0 +1,129 @@
+- generic [ref=e3]:
+  - generic:
+    - generic [ref=e346]:
+      - generic [ref=e347]: Forest To Magma
+      - heading "Infinite Swinger" [level=1] [ref=e348]
+      - paragraph [ref=e349]: Inspect. Launch. Explore.
+      - generic [ref=e350]: Focus map keeps the atlas open.
+      - generic [ref=e351]:
+        - button "Open campaign drawer" [ref=e352] [cursor=pointer]:
+          - img [ref=e354]
+        - button "Zoom out" [ref=e356] [cursor=pointer]:
+          - img [ref=e358]
+        - button "Map" [ref=e359] [cursor=pointer]
+        - button "Zoom in" [ref=e360] [cursor=pointer]:
+          - img [ref=e362]
+    - button "Open the shop and edit the current loadout" [ref=e363] [cursor=pointer]:
+      - generic [ref=e365]:
+        - generic [ref=e366]: Loadout
+        - generic [ref=e367]: Trail Scout
+        - generic [ref=e368]:
+          - img [ref=e370]
+          - generic [ref=e373]: Rope
+          - text: Classic Vine
+        - generic [ref=e374]:
+          - generic [ref=e375]: Trail
+          - generic "Camp progress level 1" [ref=e376]
+          - generic [ref=e390]: L1
+      - generic [ref=e391]:
+        - generic [ref=e392]:
+          - generic [ref=e394]:
+            - img [ref=e396]
+            - text: Rope
+          - generic [ref=e400]: Rope Length
+          - generic "Level 1" [ref=e401]:
+            - img [ref=e402]
+            - img [ref=e404]
+            - img [ref=e406]
+            - img [ref=e408]
+            - img [ref=e410]
+        - generic [ref=e412]:
+          - generic [ref=e414]:
+            - img [ref=e416]
+            - text: Launch
+          - generic [ref=e419]: Swing Force
+          - generic "Level 1" [ref=e420]:
+            - img [ref=e421]
+            - img [ref=e423]
+            - img [ref=e425]
+            - img [ref=e427]
+            - img [ref=e429]
+        - generic [ref=e431]:
+          - generic [ref=e433]:
+            - img [ref=e435]
+            - text: Survival
+          - generic [ref=e437]: Armor
+          - generic "Level 0" [ref=e438]:
+            - img [ref=e439]
+            - img [ref=e441]
+            - img [ref=e443]
+            - img [ref=e445]
+            - img [ref=e447]
+      - generic [ref=e449]:
+        - img [ref=e450]
+        - text: Tap to edit loadout in shop
+    - generic [ref=e453]:
+      - generic [ref=e454]:
+        - generic [ref=e455]:
+          - img [ref=e456]
+          - text: "0"
+        - button "Show details" [pressed] [ref=e461] [cursor=pointer]:
+          - img [ref=e462]
+          - text: Show details
+      - generic [ref=e465]:
+        - button "Map" [ref=e466] [cursor=pointer]:
+          - img [ref=e467]
+          - text: Map
+        - button "Shop" [ref=e469] [cursor=pointer]:
+          - img [ref=e470]
+          - text: Shop
+        - button "Leaderboard" [ref=e473] [cursor=pointer]: Leaderboard
+        - button "Settings" [ref=e479] [cursor=pointer]: Settings
+        - button "Story" [ref=e482] [cursor=pointer]:
+          - img [ref=e483]
+          - text: Story
+        - button "Sound On" [ref=e485] [cursor=pointer]:
+          - img [ref=e486]
+          - text: Sound On
+        - button "Full" [ref=e490] [cursor=pointer]:
+          - img [ref=e491]
+          - text: Full
+      - generic [ref=e496]: Focus map mode hides the noisy rival cards. Tap show details when you want the full board.
+    - generic [ref=e498]:
+      - generic [ref=e499]:
+        - generic [ref=e500]:
+          - generic [ref=e501]:
+            - img [ref=e502]
+            - text: Ready
+          - generic [ref=e505]:
+            - img [ref=e506]
+            - text: JUNGLE
+          - generic [ref=e508]:
+            - img [ref=e509]
+            - text: Danger 1/10
+          - generic [ref=e512]:
+            - img [ref=e513]
+            - text: 600m
+        - generic [ref=e519]:
+          - generic [ref=e520]:
+            - generic [ref=e521]: Route
+            - generic [ref=e522]: L1 Elven Outskirts
+          - generic [ref=e523]: The edge of the Kingdom.
+        - generic [ref=e524]:
+          - generic [ref=e525]: Best --
+          - generic [ref=e526]: Clears 0
+          - generic [ref=e527]:
+            - img [ref=e528]
+            - img [ref=e530]
+            - img [ref=e532]
+      - generic [ref=e534]:
+        - generic [ref=e535]:
+          - generic [ref=e536]: Launch
+          - generic [ref=e537]: Center or launch.
+          - button "Center" [ref=e538] [cursor=pointer]:
+            - img [ref=e539]
+            - text: Center
+        - button "Play Level" [ref=e541] [cursor=pointer]:
+          - generic [ref=e542]:
+            - img [ref=e543]
+            - text: Play Level

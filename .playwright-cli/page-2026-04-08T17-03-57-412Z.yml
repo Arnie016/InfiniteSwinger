@@ -1,0 +1,106 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Campaign Comic
+      - generic [ref=e10]: Drag the atlas to scout ahead
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Issue Zero • Rope Before Fire
+        - heading "Infinite Swinger" [level=1] [ref=e14]:
+          - text: Infinite
+          - text: Swinger
+        - paragraph [ref=e15]: A crew-on-the-run jungle comic where each route is a playable panel. Build momentum, choose safer or greedier lines, and carry the run all the way into the magma frontier.
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: Progress
+            - generic [ref=e19]: L1
+            - generic [ref=e20]: Current atlas reach
+          - generic [ref=e21]:
+            - generic [ref=e22]: Loop
+            - generic [ref=e23]: Route. Upgrade. Rival.
+            - generic [ref=e24]: Every clear feeds the next push
+          - generic [ref=e25]:
+            - generic [ref=e26]: Finale
+            - generic [ref=e27]: Aether Bastion
+            - generic [ref=e28]: The atlas endgame route
+        - generic [ref=e29]:
+          - button "Start Comic Tour" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - img [ref=e32]
+              - text: Start Comic Tour
+              - img [ref=e34]
+          - button "Open Story Map" [ref=e36] [cursor=pointer]:
+            - generic [ref=e37]:
+              - img [ref=e38]
+              - text: Open Story Map
+        - generic [ref=e40]:
+          - generic [ref=e41]: First launch opens the guided tour
+          - generic [ref=e42]: Double click a route node to launch fast
+      - generic [ref=e44]:
+        - generic [ref=e48]:
+          - img [ref=e49]
+          - generic:
+            - generic: Issue 01
+            - generic: Scout Nara
+          - generic:
+            - generic:
+              - generic:
+                - img
+                - generic: First line
+            - generic:
+              - generic:
+                - img
+                - generic: Arc keeper
+          - generic:
+            - generic:
+              - generic: Comic Panel
+              - generic: Forward scout
+            - generic: Camp Wakes First
+            - generic: Push the camp deeper before the ash reaches the roots.
+            - generic: Fast first mark on a fresh route.
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - button "Previous story issue" [ref=e71] [cursor=pointer]:
+              - img [ref=e72]
+            - button "Next story issue" [ref=e74] [cursor=pointer]:
+              - img [ref=e75]
+          - button "Select issue Issue 01" [ref=e78] [cursor=pointer]
+          - generic [ref=e79]: 1/1
+  - generic [ref=e80]:
+    - generic [ref=e81]:
+      - generic [ref=e82]:
+        - generic [ref=e83]: How The Run Feels
+        - img [ref=e84]
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - img [ref=e89]
+          - text: "Hold `E` or mouse to latch and keep your line alive."
+        - generic [ref=e95]:
+          - img [ref=e96]
+          - text: "`D` drives forward, `A` brakes and resets a bad angle."
+        - generic [ref=e100]:
+          - img [ref=e101]
+          - text: "`Space` jumps, `W` and `S` tune rope length mid-air."
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]: Atlas at a glance
+        - generic [ref=e108]: First launch guided
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - img [ref=e112]
+            - text: Early Goal
+          - generic [ref=e114]: Clear the first tour beats, unlock the full atlas, and start banking clean route clears for upgrades and leaderboard pushes.
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - img [ref=e117]
+            - text: Story Shape
+          - generic [ref=e119]: Each region is framed like a comic beat now, so the campaign feels like a chase across the map instead of a plain level list.
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - img [ref=e122]
+            - text: Late Threat
+          - generic [ref=e124]: Rival boards, harder branches, and the magma routes turn the late game into a consistency check instead of a single lucky run.
+    - generic [ref=e125]:
+      - generic [ref=e126]: First Launch
+      - generic [ref=e127]: Start Comic Tour to sweep through the guided intro beats, then the atlas opens for free route selection and progression.

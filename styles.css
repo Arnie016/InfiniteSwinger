@@ -34,9 +34,10 @@ body {
   margin: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at 20% 12%, rgba(34, 197, 94, 0.08), transparent 25%),
-    radial-gradient(circle at 78% 16%, rgba(245, 158, 11, 0.06), transparent 22%),
-    linear-gradient(180deg, #08111d 0%, #050b14 45%, #020617 100%);
+    radial-gradient(circle at 18% 12%, rgba(34, 197, 94, 0.1), transparent 24%),
+    radial-gradient(circle at 78% 16%, rgba(245, 158, 11, 0.08), transparent 21%),
+    radial-gradient(circle at 56% 88%, rgba(56, 189, 248, 0.07), transparent 28%),
+    linear-gradient(180deg, #0a1320 0%, #050b14 46%, #02050d 100%);
   color: #f8fafc;
   font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 16px;
@@ -107,21 +108,21 @@ body {
 .atlas-title {
   font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
 .atlas-map-title {
   font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .atlas-map-label {
   font-family: 'Rajdhani', 'Space Grotesk', system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
@@ -131,7 +132,7 @@ body {
 }
 
 .atlas-panel-copy {
-  line-height: 1.6;
+  line-height: 1.52;
 }
 
 .atlas-elevated {
@@ -179,8 +180,102 @@ body {
   animation: atlas-rope-silk 2.6s ease-in-out infinite;
 }
 
+.atlas-preview-rope-reed {
+  animation: atlas-rope-reed 2.5s ease-in-out infinite;
+}
+
+.atlas-preview-rope-ember {
+  animation: atlas-rope-ember 1.9s ease-in-out infinite;
+}
+
 .atlas-preview-glint {
   animation: atlas-glint 2s linear infinite;
+}
+
+.atlas-preview-poster-pan {
+  animation: atlas-preview-poster-pan 8s ease-in-out infinite;
+}
+
+.atlas-preview-swing-mid {
+  animation: atlas-preview-swing-mid 2.7s ease-in-out infinite;
+}
+
+.atlas-preview-beacon {
+  animation: atlas-preview-beacon 2.6s ease-in-out infinite;
+}
+
+.atlas-preview-shield {
+  animation: atlas-preview-shield 2.8s ease-in-out infinite;
+}
+
+.atlas-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.36) transparent;
+  overscroll-behavior: contain;
+}
+
+.atlas-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.atlas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.atlas-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.34), rgba(94, 234, 212, 0.24));
+  background-clip: padding-box;
+}
+
+.atlas-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.38), rgba(94, 234, 212, 0.32));
+  background-clip: padding-box;
+}
+
+.atlas-panel-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.atlas-panel-glow::before {
+  content: '';
+  position: absolute;
+  inset: -28% auto auto -12%;
+  width: 54%;
+  height: 68%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(167, 243, 208, 0.15), transparent 72%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.atlas-compass-drift {
+  animation: atlas-compass-drift 5.6s ease-in-out infinite;
+}
+
+.atlas-compass-card {
+  animation: atlas-compass-card 6.2s ease-in-out infinite;
+}
+
+.atlas-compass-ring {
+  animation: atlas-compass-ring 14s linear infinite;
+}
+
+.atlas-compass-needle {
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 0 12px rgba(167, 243, 208, 0.2));
+}
+
+.atlas-compass-glow {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15), transparent 72%);
+  animation: atlas-compass-glow 4.4s ease-in-out infinite;
+}
+
+.atlas-orbit {
+  animation: atlas-orbit 10s linear infinite;
 }
 
 @keyframes bounce-slow {
@@ -243,6 +338,26 @@ body {
   }
 }
 
+@keyframes atlas-rope-reed {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-7deg) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) rotate(8deg) scaleY(1.03);
+  }
+}
+
+@keyframes atlas-rope-ember {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(-2deg) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) rotate(3deg) scaleY(0.98);
+  }
+}
+
 @keyframes atlas-glint {
   0% {
     opacity: 0.1;
@@ -255,6 +370,98 @@ body {
   100% {
     opacity: 0.1;
     transform: translateX(-50%) scale(0.75);
+  }
+}
+
+@keyframes atlas-preview-poster-pan {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+@keyframes atlas-preview-swing-mid {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(-8deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(9deg) translateY(-2px);
+  }
+}
+
+@keyframes atlas-preview-beacon {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.58;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.95;
+  }
+}
+
+@keyframes atlas-preview-shield {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(0.98);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.03);
+    opacity: 1;
+  }
+}
+
+@keyframes atlas-compass-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes atlas-compass-card {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes atlas-compass-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes atlas-compass-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes atlas-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 

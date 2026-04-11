@@ -1,0 +1,699 @@
+- generic [ref=e3]:
+  - generic [ref=e1301]:
+    - generic [ref=e1302]:
+      - generic [ref=e1303]:
+        - generic [ref=e1304]:
+          - generic [ref=e1305]:
+            - generic [ref=e1306]: Infinite Swinger
+            - generic [ref=e1307]: Campaign Atlas
+          - button "Hide campaign sidebar" [ref=e1308] [cursor=pointer]:
+            - img [ref=e1309]
+        - generic [ref=e1311]: Progress & Achievements
+        - generic [ref=e1312]: 0 runs • 0% wins • best 0
+      - generic [ref=e1313]:
+        - generic [ref=e1314]:
+          - generic [ref=e1315]: Atlas shortcuts
+          - generic [ref=e1316]: 0 contested
+        - generic [ref=e1317]:
+          - button "Overview" [ref=e1318] [cursor=pointer]:
+            - img [ref=e1319]
+            - text: Overview
+          - button "Routes" [ref=e1321] [cursor=pointer]:
+            - img [ref=e1322]
+            - text: Routes
+          - button "Rivals" [ref=e1324] [cursor=pointer]:
+            - img [ref=e1325]
+            - text: Rivals
+          - button "Awards" [ref=e1331] [cursor=pointer]:
+            - img [ref=e1332]
+            - text: Awards
+      - generic [ref=e1334]:
+        - generic [ref=e1335]:
+          - generic [ref=e1336]: Campaign Quest
+          - generic [ref=e1337]: 0%
+        - generic [ref=e1338]: Clear Elven Outskirts
+        - generic [ref=e1339]: This branch is the next campaign step. Finish it to unlock the next atlas lane.
+        - generic [ref=e1341]: "Camp target: Route 1."
+      - button "Daily Crew Cup Resets in 10h 22m Open The Great Lake Unclaimed No benchmark exists on today’s featured route yet. Land the first clean score to own the cup outright. First score claims the cup Your best -- Rival --" [ref=e1342] [cursor=pointer]:
+        - generic [ref=e1343]:
+          - generic [ref=e1344]: Daily Crew Cup
+          - generic [ref=e1345]: Resets in 10h 22m
+        - generic [ref=e1346]:
+          - generic [ref=e1347]: Open The Great Lake
+          - generic [ref=e1348]: Unclaimed
+        - generic [ref=e1349]: No benchmark exists on today’s featured route yet. Land the first clean score to own the cup outright.
+        - generic [ref=e1351]: First score claims the cup
+        - generic [ref=e1352]:
+          - generic [ref=e1353]:
+            - generic [ref=e1354]: Your best
+            - generic [ref=e1355]: "--"
+          - generic [ref=e1356]:
+            - generic [ref=e1357]: Rival
+            - generic [ref=e1358]: "--"
+    - generic [ref=e1359]:
+      - generic [ref=e1360]:
+        - generic [ref=e1361]:
+          - generic [ref=e1362]:
+            - img [ref=e1363]
+            - text: Branch Consistency
+          - generic [ref=e1365]: 0 live
+        - generic [ref=e1366]: Current streak 0 • Best 0
+        - generic [ref=e1367]: Build a 5-clears sequence to stabilize unlock flow and campaign pace.
+      - generic [ref=e1368]:
+        - generic [ref=e1369]:
+          - generic [ref=e1370]:
+            - img [ref=e1371]
+            - text: Atlas Expansion
+          - generic [ref=e1373]: 12/13
+        - generic [ref=e1374]:
+          - generic [ref=e1375]: Map depth
+          - generic [ref=e1376]: Finish the current camp to open the next branch of the atlas.
+        - generic [ref=e1377]:
+          - generic [ref=e1378]:
+            - generic [ref=e1379]:
+              - generic [ref=e1380]:
+                - img [ref=e1381]
+                - generic [ref=e1383]: L1 • Elven Outskirts
+              - generic [ref=e1384]: Unlocked
+            - paragraph [ref=e1385]: Open for first clear • No attempts yet
+          - generic [ref=e1386]:
+            - generic [ref=e1387]:
+              - generic [ref=e1388]:
+                - img [ref=e1389]
+                - generic [ref=e1391]: L2 • Royal Canopy
+              - generic [ref=e1392]: Unlocked
+            - paragraph [ref=e1393]: Open for first clear • No attempts yet
+          - generic [ref=e1394]:
+            - generic [ref=e1395]:
+              - generic [ref=e1396]:
+                - img [ref=e1397]
+                - generic [ref=e1399]: L3 • The Great Lake
+              - generic [ref=e1400]: Unlocked
+            - paragraph [ref=e1401]: Open for first clear • No attempts yet
+          - generic [ref=e1402]:
+            - generic [ref=e1403]:
+              - generic [ref=e1404]:
+                - img [ref=e1405]
+                - generic [ref=e1407]: L4 • Misty Waters
+              - generic [ref=e1408]: Unlocked
+            - paragraph [ref=e1409]: Open for first clear • No attempts yet
+          - generic [ref=e1410]:
+            - generic [ref=e1411]:
+              - generic [ref=e1412]:
+                - img [ref=e1413]
+                - generic [ref=e1415]: L5 • Troll Valley
+              - generic [ref=e1416]: Unlocked
+            - paragraph [ref=e1417]: Open for first clear • No attempts yet
+          - generic [ref=e1418]:
+            - generic [ref=e1419]:
+              - generic [ref=e1420]:
+                - img [ref=e1421]
+                - generic [ref=e1423]: L6 • Lava Lake
+              - generic [ref=e1424]: Unlocked
+            - paragraph [ref=e1425]: Open for first clear • No attempts yet
+          - generic [ref=e1426]:
+            - generic [ref=e1427]:
+              - generic [ref=e1428]:
+                - img [ref=e1429]
+                - generic [ref=e1431]: L7 • Rocky Slopes
+              - generic [ref=e1432]: Unlocked
+            - paragraph [ref=e1433]: Open for first clear • No attempts yet
+          - generic [ref=e1434]:
+            - generic [ref=e1435]:
+              - generic [ref=e1436]:
+                - img [ref=e1437]
+                - generic [ref=e1439]: L8 • Ash Storm
+              - generic [ref=e1440]: Unlocked
+            - paragraph [ref=e1441]: Open for first clear • No attempts yet
+          - generic [ref=e1442]:
+            - generic [ref=e1443]:
+              - generic [ref=e1444]:
+                - img [ref=e1445]
+                - generic [ref=e1447]: L9 • The Peak
+              - generic [ref=e1448]: Unlocked
+            - paragraph [ref=e1449]: Open for first clear • No attempts yet
+          - generic [ref=e1450]:
+            - generic [ref=e1451]:
+              - generic [ref=e1452]:
+                - img [ref=e1453]
+                - generic [ref=e1455]: L10 • Magma Core
+              - generic [ref=e1456]: Unlocked
+            - paragraph [ref=e1457]: Open for first clear • No attempts yet
+          - generic [ref=e1458]:
+            - generic [ref=e1459]:
+              - generic [ref=e1460]:
+                - img [ref=e1461]
+                - generic [ref=e1463]: L11 • Sky Bastion
+              - generic [ref=e1464]: Unlocked
+            - paragraph [ref=e1465]: Open for first clear • No attempts yet
+          - generic [ref=e1466]:
+            - generic [ref=e1467]:
+              - generic [ref=e1468]:
+                - img [ref=e1469]
+                - generic [ref=e1471]: L12 • Storm Crown
+              - generic [ref=e1472]: Unlocked
+            - paragraph [ref=e1473]: Current gate route • No attempts yet
+            - button "Focus current lane" [ref=e1474] [cursor=pointer]
+          - generic [ref=e1475]:
+            - generic [ref=e1476]:
+              - generic [ref=e1477]:
+                - img [ref=e1478]
+                - generic [ref=e1480]: L13 • Aether Bastion
+              - generic [ref=e1481]: Locked
+            - paragraph [ref=e1482]: Need L12 cleared before this route opens.
+            - generic [ref=e1483]: Gate blocked by current route
+        - button "Focus on L12 to unlock the next branch" [ref=e1484] [cursor=pointer]
+      - generic [ref=e1485]:
+        - generic [ref=e1486]:
+          - generic [ref=e1487]:
+            - img [ref=e1488]
+            - text: Route List
+          - generic [ref=e1490]: 12/13
+        - generic [ref=e1491]:
+          - generic [ref=e1492]:
+            - generic [ref=e1493]: Contested
+            - generic [ref=e1494]: "0"
+          - generic [ref=e1495]:
+            - generic [ref=e1496]: Leading
+            - generic [ref=e1497]: "0"
+          - generic [ref=e1498]:
+            - generic [ref=e1499]: Chasing
+            - generic [ref=e1500]: "0"
+        - generic [ref=e1501]:
+          - button "Lv 1 0× Elven Outskirts 0 • JUNGLE Solo No imported rival on this route yet. Challenge Copy" [ref=e1502] [cursor=pointer]:
+            - generic [ref=e1503]:
+              - generic [ref=e1504]:
+                - img [ref=e1505]
+                - generic [ref=e1507]: Lv 1
+              - generic [ref=e1509]: 0×
+            - generic [ref=e1510]: Elven Outskirts
+            - generic [ref=e1511]:
+              - generic [ref=e1512]: 0 • JUNGLE
+              - generic [ref=e1513]:
+                - img [ref=e1514]
+                - img [ref=e1516]
+                - img [ref=e1518]
+            - generic [ref=e1520]:
+              - generic [ref=e1521]: Solo
+              - generic [ref=e1522]: No imported rival on this route yet.
+            - generic [ref=e1523]:
+              - button "Challenge" [ref=e1524]:
+                - img [ref=e1525]
+                - text: Challenge
+              - button "Copy" [ref=e1531]:
+                - img [ref=e1532]
+                - text: Copy
+          - button "Lv 2 0× Royal Canopy 1 • JUNGLE Solo No imported rival on this route yet. Challenge Copy" [ref=e1535] [cursor=pointer]:
+            - generic [ref=e1536]:
+              - generic [ref=e1537]:
+                - img [ref=e1538]
+                - generic [ref=e1540]: Lv 2
+              - generic [ref=e1542]: 0×
+            - generic [ref=e1543]: Royal Canopy
+            - generic [ref=e1544]:
+              - generic [ref=e1545]: 1 • JUNGLE
+              - generic [ref=e1546]:
+                - img [ref=e1547]
+                - img [ref=e1549]
+                - img [ref=e1551]
+            - generic [ref=e1553]:
+              - generic [ref=e1554]: Solo
+              - generic [ref=e1555]: No imported rival on this route yet.
+            - generic [ref=e1556]:
+              - button "Challenge" [ref=e1557]:
+                - img [ref=e1558]
+                - text: Challenge
+              - button "Copy" [ref=e1564]:
+                - img [ref=e1565]
+                - text: Copy
+          - button "Lv 3 0× The Great Lake 3 • SWAMP Solo No imported rival on this route yet. Challenge Copy" [ref=e1568] [cursor=pointer]:
+            - generic [ref=e1569]:
+              - generic [ref=e1570]:
+                - img [ref=e1571]
+                - generic [ref=e1573]: Lv 3
+              - generic [ref=e1575]: 0×
+            - generic [ref=e1576]: The Great Lake
+            - generic [ref=e1577]:
+              - generic [ref=e1578]: 3 • SWAMP
+              - generic [ref=e1579]:
+                - img [ref=e1580]
+                - img [ref=e1582]
+                - img [ref=e1584]
+            - generic [ref=e1586]:
+              - generic [ref=e1587]: Solo
+              - generic [ref=e1588]: No imported rival on this route yet.
+            - generic [ref=e1589]:
+              - button "Challenge" [ref=e1590]:
+                - img [ref=e1591]
+                - text: Challenge
+              - button "Copy" [ref=e1597]:
+                - img [ref=e1598]
+                - text: Copy
+          - button "Lv 4 0× Misty Waters 4 • SWAMP Solo No imported rival on this route yet. Challenge Copy" [ref=e1601] [cursor=pointer]:
+            - generic [ref=e1602]:
+              - generic [ref=e1603]:
+                - img [ref=e1604]
+                - generic [ref=e1606]: Lv 4
+              - generic [ref=e1608]: 0×
+            - generic [ref=e1609]: Misty Waters
+            - generic [ref=e1610]:
+              - generic [ref=e1611]: 4 • SWAMP
+              - generic [ref=e1612]:
+                - img [ref=e1613]
+                - img [ref=e1615]
+                - img [ref=e1617]
+            - generic [ref=e1619]:
+              - generic [ref=e1620]: Solo
+              - generic [ref=e1621]: No imported rival on this route yet.
+            - generic [ref=e1622]:
+              - button "Challenge" [ref=e1623]:
+                - img [ref=e1624]
+                - text: Challenge
+              - button "Copy" [ref=e1630]:
+                - img [ref=e1631]
+                - text: Copy
+          - button "Lv 5 0× Troll Valley 5 • CAVE Solo No imported rival on this route yet. Challenge Copy" [ref=e1634] [cursor=pointer]:
+            - generic [ref=e1635]:
+              - generic [ref=e1636]:
+                - img [ref=e1637]
+                - generic [ref=e1639]: Lv 5
+              - generic [ref=e1641]: 0×
+            - generic [ref=e1642]: Troll Valley
+            - generic [ref=e1643]:
+              - generic [ref=e1644]: 5 • CAVE
+              - generic [ref=e1645]:
+                - img [ref=e1646]
+                - img [ref=e1648]
+                - img [ref=e1650]
+            - generic [ref=e1652]:
+              - generic [ref=e1653]: Solo
+              - generic [ref=e1654]: No imported rival on this route yet.
+            - generic [ref=e1655]:
+              - button "Challenge" [ref=e1656]:
+                - img [ref=e1657]
+                - text: Challenge
+              - button "Copy" [ref=e1663]:
+                - img [ref=e1664]
+                - text: Copy
+          - button "Lv 6 0× Lava Lake 6 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1667] [cursor=pointer]:
+            - generic [ref=e1668]:
+              - generic [ref=e1669]:
+                - img [ref=e1670]
+                - generic [ref=e1672]: Lv 6
+              - generic [ref=e1674]: 0×
+            - generic [ref=e1675]: Lava Lake
+            - generic [ref=e1676]:
+              - generic [ref=e1677]: 6 • VOLCANO
+              - generic [ref=e1678]:
+                - img [ref=e1679]
+                - img [ref=e1681]
+                - img [ref=e1683]
+            - generic [ref=e1685]:
+              - generic [ref=e1686]: Solo
+              - generic [ref=e1687]: No imported rival on this route yet.
+            - generic [ref=e1688]:
+              - button "Challenge" [ref=e1689]:
+                - img [ref=e1690]
+                - text: Challenge
+              - button "Copy" [ref=e1696]:
+                - img [ref=e1697]
+                - text: Copy
+          - button "Lv 7 0× Rocky Slopes 7 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1700] [cursor=pointer]:
+            - generic [ref=e1701]:
+              - generic [ref=e1702]:
+                - img [ref=e1703]
+                - generic [ref=e1705]: Lv 7
+              - generic [ref=e1707]: 0×
+            - generic [ref=e1708]: Rocky Slopes
+            - generic [ref=e1709]:
+              - generic [ref=e1710]: 7 • VOLCANO
+              - generic [ref=e1711]:
+                - img [ref=e1712]
+                - img [ref=e1714]
+                - img [ref=e1716]
+            - generic [ref=e1718]:
+              - generic [ref=e1719]: Solo
+              - generic [ref=e1720]: No imported rival on this route yet.
+            - generic [ref=e1721]:
+              - button "Challenge" [ref=e1722]:
+                - img [ref=e1723]
+                - text: Challenge
+              - button "Copy" [ref=e1729]:
+                - img [ref=e1730]
+                - text: Copy
+          - button "Lv 8 0× Ash Storm 8 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1733] [cursor=pointer]:
+            - generic [ref=e1734]:
+              - generic [ref=e1735]:
+                - img [ref=e1736]
+                - generic [ref=e1738]: Lv 8
+              - generic [ref=e1740]: 0×
+            - generic [ref=e1741]: Ash Storm
+            - generic [ref=e1742]:
+              - generic [ref=e1743]: 8 • VOLCANO
+              - generic [ref=e1744]:
+                - img [ref=e1745]
+                - img [ref=e1747]
+                - img [ref=e1749]
+            - generic [ref=e1751]:
+              - generic [ref=e1752]: Solo
+              - generic [ref=e1753]: No imported rival on this route yet.
+            - generic [ref=e1754]:
+              - button "Challenge" [ref=e1755]:
+                - img [ref=e1756]
+                - text: Challenge
+              - button "Copy" [ref=e1762]:
+                - img [ref=e1763]
+                - text: Copy
+          - button "Lv 9 0× The Peak 9 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1766] [cursor=pointer]:
+            - generic [ref=e1767]:
+              - generic [ref=e1768]:
+                - img [ref=e1769]
+                - generic [ref=e1771]: Lv 9
+              - generic [ref=e1773]: 0×
+            - generic [ref=e1774]: The Peak
+            - generic [ref=e1775]:
+              - generic [ref=e1776]: 9 • VOLCANO
+              - generic [ref=e1777]:
+                - img [ref=e1778]
+                - img [ref=e1780]
+                - img [ref=e1782]
+            - generic [ref=e1784]:
+              - generic [ref=e1785]: Solo
+              - generic [ref=e1786]: No imported rival on this route yet.
+            - generic [ref=e1787]:
+              - button "Challenge" [ref=e1788]:
+                - img [ref=e1789]
+                - text: Challenge
+              - button "Copy" [ref=e1795]:
+                - img [ref=e1796]
+                - text: Copy
+          - button "Lv 10 0× Magma Core 10 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1799] [cursor=pointer]:
+            - generic [ref=e1800]:
+              - generic [ref=e1801]:
+                - img [ref=e1802]
+                - generic [ref=e1804]: Lv 10
+              - generic [ref=e1806]: 0×
+            - generic [ref=e1807]: Magma Core
+            - generic [ref=e1808]:
+              - generic [ref=e1809]: 10 • VOLCANO
+              - generic [ref=e1810]:
+                - img [ref=e1811]
+                - img [ref=e1813]
+                - img [ref=e1815]
+            - generic [ref=e1817]:
+              - generic [ref=e1818]: Solo
+              - generic [ref=e1819]: No imported rival on this route yet.
+            - generic [ref=e1820]:
+              - button "Challenge" [ref=e1821]:
+                - img [ref=e1822]
+                - text: Challenge
+              - button "Copy" [ref=e1828]:
+                - img [ref=e1829]
+                - text: Copy
+          - button "Lv 11 0× Sky Bastion 11 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1832] [cursor=pointer]:
+            - generic [ref=e1833]:
+              - generic [ref=e1834]:
+                - img [ref=e1835]
+                - generic [ref=e1837]: Lv 11
+              - generic [ref=e1839]: 0×
+            - generic [ref=e1840]: Sky Bastion
+            - generic [ref=e1841]:
+              - generic [ref=e1842]: 11 • VOLCANO
+              - generic [ref=e1843]:
+                - img [ref=e1844]
+                - img [ref=e1846]
+                - img [ref=e1848]
+            - generic [ref=e1850]:
+              - generic [ref=e1851]: Solo
+              - generic [ref=e1852]: No imported rival on this route yet.
+            - generic [ref=e1853]:
+              - button "Challenge" [ref=e1854]:
+                - img [ref=e1855]
+                - text: Challenge
+              - button "Copy" [ref=e1861]:
+                - img [ref=e1862]
+                - text: Copy
+          - button "Lv 12 0× Storm Crown 12 • VOLCANO Solo No imported rival on this route yet. Challenge Copy" [ref=e1865] [cursor=pointer]:
+            - generic [ref=e1866]:
+              - generic [ref=e1867]:
+                - img [ref=e1868]
+                - generic [ref=e1870]: Lv 12
+              - generic [ref=e1872]: 0×
+            - generic [ref=e1873]: Storm Crown
+            - generic [ref=e1874]:
+              - generic [ref=e1875]: 12 • VOLCANO
+              - generic [ref=e1876]:
+                - img [ref=e1877]
+                - img [ref=e1879]
+                - img [ref=e1881]
+            - generic [ref=e1883]:
+              - generic [ref=e1884]: Solo
+              - generic [ref=e1885]: No imported rival on this route yet.
+            - generic [ref=e1886]:
+              - button "Challenge" [ref=e1887]:
+                - img [ref=e1888]
+                - text: Challenge
+              - button "Copy" [ref=e1894]:
+                - img [ref=e1895]
+                - text: Copy
+          - button "Lv 13 0× Aether Bastion Locked by progress Locked" [disabled] [ref=e1898]:
+            - generic [ref=e1899]:
+              - generic [ref=e1900]:
+                - img [ref=e1901]
+                - generic [ref=e1904]: Lv 13
+              - generic [ref=e1906]: 0×
+            - generic [ref=e1907]: Aether Bastion
+            - generic [ref=e1909]: Locked by progress
+            - paragraph [ref=e1910]: Locked
+        - generic [ref=e1911]:
+          - button "Challenge selected route" [ref=e1912] [cursor=pointer]:
+            - img [ref=e1913]
+            - text: Challenge selected route
+          - button "Copy selected route" [ref=e1919] [cursor=pointer]:
+            - img [ref=e1920]
+            - text: Copy selected route
+    - generic [ref=e1923]:
+      - generic [ref=e1924]:
+        - generic [ref=e1925]:
+          - img [ref=e1926]
+          - text: Rival Routes
+        - generic [ref=e1932]: offline
+      - generic [ref=e1933]: Import a rival runboard to turn the atlas into a head-to-head ladder. Shared boards merge locally, so the campaign drawer can keep surfacing the best routes to attack next.
+      - generic [ref=e1934]:
+        - button "Share" [ref=e1935] [cursor=pointer]:
+          - img [ref=e1936]
+          - text: Share
+        - button "Boards" [ref=e1942] [cursor=pointer]:
+          - img [ref=e1943]
+          - text: Boards
+        - button "Set source" [disabled] [ref=e1949]:
+          - img [ref=e1950]
+          - text: Set source
+      - paragraph [ref=e1953]: Paste a public Google Sheet or CSV once to enable one-tap rivalry sync.
+    - generic [ref=e1954]:
+      - generic [ref=e1955]:
+        - generic [ref=e1956]:
+          - img [ref=e1957]
+          - text: Achievements
+        - generic [ref=e1963]: 0/10
+      - generic [ref=e1964]:
+        - generic [ref=e1965]:
+          - generic [ref=e1966]:
+            - generic [ref=e1967]: First Clear
+            - img [ref=e1968]
+          - paragraph [ref=e1970]: Finish one route.
+          - paragraph [ref=e1971]: 0/1
+        - generic [ref=e1972]:
+          - generic [ref=e1973]:
+            - generic [ref=e1974]: Route Runner
+            - img [ref=e1975]
+          - paragraph [ref=e1977]: Clear three routes total.
+          - paragraph [ref=e1978]: 0/3
+        - generic [ref=e1979]:
+          - generic [ref=e1980]:
+            - generic [ref=e1981]: Branch Expansion
+            - img [ref=e1982]
+          - paragraph [ref=e1984]: Clear 8 routes for full branch confidence.
+          - paragraph [ref=e1985]: 0/8
+        - generic [ref=e1986]:
+          - generic [ref=e1987]:
+            - generic [ref=e1988]: Star Master
+            - img [ref=e1989]
+          - paragraph [ref=e1991]: Take any route to three stars.
+          - paragraph [ref=e1992]: 0/1 route
+        - generic [ref=e1993]:
+          - generic [ref=e1994]:
+            - generic [ref=e1995]: Magma Clear
+            - img [ref=e1996]
+          - paragraph [ref=e1998]: Clear level 13 to expose the final camp.
+          - paragraph [ref=e1999]: 0/1
+        - generic [ref=e2000]:
+          - generic [ref=e2001]:
+            - generic [ref=e2002]: High Score Burst
+            - img [ref=e2003]
+          - paragraph [ref=e2005]: Push atlas score above 1000.
+          - paragraph [ref=e2006]: 0/1000
+        - generic [ref=e2007]:
+          - generic [ref=e2008]:
+            - generic [ref=e2009]: Branch Consistency
+            - img [ref=e2010]
+          - paragraph [ref=e2012]: Chain 5 clears without a failed route.
+          - paragraph [ref=e2013]: 0/5 (best 0)
+        - generic [ref=e2014]:
+          - generic [ref=e2015]:
+            - generic [ref=e2016]: Board Scout
+            - img [ref=e2017]
+          - paragraph [ref=e2019]: Import one rival runboard.
+          - paragraph [ref=e2020]: 0/1
+        - generic [ref=e2021]:
+          - generic [ref=e2022]:
+            - generic [ref=e2023]: Route Taker
+            - img [ref=e2024]
+          - paragraph [ref=e2026]: Lead one contested route against an imported board.
+          - paragraph [ref=e2027]: 0/1 route
+        - generic [ref=e2028]:
+          - generic [ref=e2029]:
+            - generic [ref=e2030]: Crew Climber
+            - img [ref=e2031]
+          - paragraph [ref=e2033]: Lead three contested routes at once.
+          - paragraph [ref=e2034]: 0/3 routes
+  - generic:
+    - generic [ref=e2035]:
+      - generic [ref=e2036]: Forest To Magma
+      - heading "Infinite Swinger" [level=1] [ref=e2037]
+      - paragraph [ref=e2038]: Inspect. Launch. Explore.
+      - generic [ref=e2039]: Tap a route or step with arrows.
+      - generic [ref=e2040]:
+        - generic [ref=e2041]:
+          - generic [ref=e2042]: Route browser
+          - generic [ref=e2043]: 12/13
+        - generic [ref=e2044]: L12 Storm Crown
+        - generic [ref=e2045]: Ready to launch
+        - generic [ref=e2046]:
+          - button "Previous route" [ref=e2047] [cursor=pointer]:
+            - img [ref=e2048]
+          - button "Center selected route" [ref=e2050] [cursor=pointer]:
+            - img [ref=e2051]
+          - button "Next route" [ref=e2053] [cursor=pointer]:
+            - img [ref=e2054]
+        - generic [ref=e2056]: Enter launches. Click any node to inspect.
+      - generic [ref=e2057]:
+        - button "Zoom out" [ref=e2058] [cursor=pointer]:
+          - img [ref=e2060]
+        - button "Map" [ref=e2061] [cursor=pointer]
+        - button "Zoom in" [ref=e2062] [cursor=pointer]:
+          - img [ref=e2064]
+    - button "Open the shop and edit the current loadout" [ref=e2065] [cursor=pointer]:
+      - generic [ref=e2067]:
+        - generic [ref=e2068]: Loadout
+        - generic [ref=e2069]: Trail Scout
+        - generic [ref=e2070]:
+          - img [ref=e2072]
+          - generic [ref=e2075]: Rope
+          - text: Classic Vine
+        - generic [ref=e2076]:
+          - generic [ref=e2077]: Trail
+          - generic "Camp progress level 12" [ref=e2078]
+          - generic [ref=e2092]: L12
+      - generic [ref=e2093]:
+        - generic [ref=e2094]:
+          - generic [ref=e2096]:
+            - img [ref=e2098]
+            - text: Rope
+          - generic [ref=e2102]: Rope Length
+          - generic "Level 1" [ref=e2103]:
+            - img [ref=e2104]
+            - img [ref=e2106]
+            - img [ref=e2108]
+            - img [ref=e2110]
+            - img [ref=e2112]
+        - generic [ref=e2114]:
+          - generic [ref=e2116]:
+            - img [ref=e2118]
+            - text: Launch
+          - generic [ref=e2121]: Swing Force
+          - generic "Level 1" [ref=e2122]:
+            - img [ref=e2123]
+            - img [ref=e2125]
+            - img [ref=e2127]
+            - img [ref=e2129]
+            - img [ref=e2131]
+        - generic [ref=e2133]:
+          - generic [ref=e2135]:
+            - img [ref=e2137]
+            - text: Survival
+          - generic [ref=e2139]: Armor
+          - generic "Level 0" [ref=e2140]:
+            - img [ref=e2141]
+            - img [ref=e2143]
+            - img [ref=e2145]
+            - img [ref=e2147]
+            - img [ref=e2149]
+      - generic [ref=e2151]:
+        - img [ref=e2152]
+        - text: Tap to edit loadout in shop
+    - generic [ref=e2155]:
+      - generic [ref=e2156]:
+        - generic [ref=e2157]:
+          - img [ref=e2158]
+          - text: "5000"
+        - button "Show details" [pressed] [ref=e2163] [cursor=pointer]:
+          - img [ref=e2164]
+          - text: Show details
+      - generic [ref=e2167]:
+        - button "Map" [ref=e2168] [cursor=pointer]:
+          - img [ref=e2169]
+          - text: Map
+        - button "Shop" [ref=e2171] [cursor=pointer]:
+          - img [ref=e2172]
+          - text: Shop
+        - button "Leaderboard" [ref=e2175] [cursor=pointer]: Leaderboard
+        - button "Settings" [ref=e2181] [cursor=pointer]: Settings
+        - button "Story" [ref=e2184] [cursor=pointer]:
+          - img [ref=e2185]
+          - text: Story
+        - button "Sound On" [ref=e2187] [cursor=pointer]:
+          - img [ref=e2188]
+          - text: Sound On
+        - button "Full" [ref=e2192] [cursor=pointer]:
+          - img [ref=e2193]
+          - text: Full
+      - generic [ref=e2198]: Focus map mode hides the noisy rival cards. Tap show details when you want the full board.
+    - generic [ref=e2200]:
+      - generic [ref=e2201]:
+        - generic [ref=e2202]:
+          - generic [ref=e2203]:
+            - img [ref=e2204]
+            - text: Ready
+          - generic [ref=e2207]:
+            - img [ref=e2208]
+            - text: VOLCANO
+          - generic [ref=e2210]:
+            - img [ref=e2211]
+            - text: Danger 13/10
+          - generic [ref=e2214]:
+            - img [ref=e2215]
+            - text: 6200m
+        - generic [ref=e2221]:
+          - generic [ref=e2222]:
+            - generic [ref=e2223]: Route
+            - generic [ref=e2224]: L12 Storm Crown
+          - generic [ref=e2225]: The final crownline above the ash.
+        - generic [ref=e2226]:
+          - generic [ref=e2227]: Best --
+          - generic [ref=e2228]: Clears 0
+          - generic [ref=e2229]:
+            - img [ref=e2230]
+            - img [ref=e2232]
+            - img [ref=e2234]
+      - generic [ref=e2236]:
+        - generic [ref=e2237]:
+          - generic [ref=e2238]: Launch
+          - generic [ref=e2239]: Center or launch.
+          - button "Center" [ref=e2240] [cursor=pointer]:
+            - img [ref=e2241]
+            - text: Center
+        - button "Play Level" [ref=e2243] [cursor=pointer]:
+          - generic [ref=e2244]:
+            - img [ref=e2245]
+            - text: Play Level

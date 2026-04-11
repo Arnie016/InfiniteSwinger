@@ -1,5 +1,29 @@
 import React from 'react';
-import { ArrowRight, BookOpen, CheckCircle2, Clock, Flame, Flag, Lock, Map, RotateCcw, Share2, Star, Trophy, X, Copy, AlertTriangle } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Copy,
+  Flame,
+  Flag,
+  Lock,
+  LocateFixed,
+  Map as MapIcon,
+  Maximize2,
+  RotateCcw,
+  Settings2,
+  Share2,
+  ShoppingBag,
+  Star,
+  Trophy,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
 
 import { FeaturedRouteCup, LevelConfig, LevelResult, RunHistoryEntry } from '../../types';
 
@@ -64,10 +88,26 @@ type Props = {
   onOpenLeaderboard: () => void;
   onShareRunboard: () => void;
   onRefreshCommunityBoard: () => void;
+  onOpenShop?: () => void;
+  onOpenStory?: () => void;
+  onOpenSettings?: () => void;
+  onToggleMute?: () => void;
+  onToggleFullscreen?: () => void | Promise<void>;
+  onPreviousRoute?: () => void;
+  onNextRoute?: () => void;
+  onCenterSelected?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetView?: () => void;
   leaderboardRemoteSource?: string;
   onShareRouteChallenge?: (levelId: number) => void;
   onCopyRouteChallenge?: (levelId: number) => void;
   leaderboardRemoteSyncAt?: number | null;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
+  isMuted?: boolean;
+  isFullscreen?: boolean;
+  isAtlasFocusMode?: boolean;
 };
 
 const isPinnedRemoteSource = (source?: string) =>
@@ -219,6 +259,76 @@ const starRow = (count: number) => {
     </span>
   );
 };
+
+function SidebarPanelAction({
+  label,
+  detail,
+  icon,
+  onClick,
+  tone = 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+}: {
+  key?: React.Key;
+  label: string;
+  detail: string;
+  icon: React.ReactNode;
+  onClick: () => void | Promise<void>;
+  tone?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => void onClick()}
+      className={`group inline-flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all ${tone}`}
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-950/40">
+          {icon}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-current">{label}</span>
+          <span className="mt-0.5 block text-[10px] leading-relaxed text-white/58">{detail}</span>
+        </span>
+      </span>
+      <ArrowRight
+        size={13}
+        className="shrink-0 text-white/36 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/70"
+      />
+    </button>
+  );
+}
+
+function SidebarRailButton({
+  label,
+  detail,
+  onClick,
+  className,
+  ariaLabel,
+  children,
+}: {
+  label: string;
+  detail: string;
+  onClick: () => void;
+  className?: string;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative flex items-center justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel ?? label}
+        title={detail ? `${label}: ${detail}` : label}
+        className={className}
+      >
+        {children}
+      </button>
+      <div className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden w-max -translate-y-1/2 rounded-full border border-white/10 bg-slate-950/92 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/82 shadow-[0_10px_24px_rgba(2,6,23,0.3)] transition-all duration-150 group-hover:block group-focus-within:block">
+        {label}
+      </div>
+    </div>
+  );
+}
 
 const rowScoreSort = (left: LeaderboardBoardEntry, right: LeaderboardBoardEntry) => {
   const scoreDiff = right.score - left.score;
@@ -422,15 +532,32 @@ export function ProgressSidebar({
   onOpenLeaderboard,
   onShareRunboard,
   onRefreshCommunityBoard,
+  onOpenShop,
+  onOpenStory,
+  onOpenSettings,
+  onToggleMute,
+  onToggleFullscreen,
+  onPreviousRoute,
+  onNextRoute,
+  onCenterSelected,
+  onZoomIn,
+  onZoomOut,
+  onResetView,
   leaderboardRemoteSource,
   leaderboardRemoteSyncAt,
   onShareRouteChallenge,
   onCopyRouteChallenge,
+  isCollapsed = false,
+  onToggleCollapsed,
+  isMuted = false,
+  isFullscreen = false,
+  isAtlasFocusMode = false,
 }: Props) {
   const unlockedRuns = levels.filter((level) => level.id <= highestUnlockedLevel);
   const rivalHighlights = buildRouteRivalHighlights(levels, runHistory, communityRunHistory);
   const routeControlEntries = buildRouteControlEntries(levels, runHistory, communityRunHistory);
   const campaignMilestones = buildCampaignMilestones(levels, levelResults, runHistory, highestUnlockedLevel);
+  const unlockedAchievementCount = achievements.filter((entry) => entry.unlocked).length;
   const contestedRouteCount = routeControlEntries.filter((entry) => entry.localBest && entry.rivalBest).length;
   const routeLeadCount = routeControlEntries.filter((entry) => entry.status === 'leading').length;
   const routeTrailCount = routeControlEntries.filter((entry) => entry.status === 'trailing').length;
@@ -505,10 +632,105 @@ export function ProgressSidebar({
       : 'pointer-events-none absolute inset-y-0 left-3 z-20 hidden w-[298px] flex-col py-3 xl:flex';
   const shellClassName =
     variant === 'drawer'
-      ? 'relative flex h-full min-h-0 w-[min(88vw,320px)] flex-col overflow-hidden rounded-r-[1.75rem] border-r border-white/10 bg-slate-950/94 p-3 text-white shadow-[24px_0_80px_rgba(2,6,23,0.7)] backdrop-blur-2xl atlas-surface atlas-elevated'
+      ? 'relative flex h-full min-h-0 w-[min(92vw,360px)] flex-col overflow-hidden rounded-r-[1.75rem] border-r border-white/10 bg-slate-950/94 p-3 text-white shadow-[24px_0_80px_rgba(2,6,23,0.7)] backdrop-blur-2xl atlas-surface atlas-elevated'
       : 'pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-950/86 p-3 text-white backdrop-blur-xl atlas-surface atlas-elevated';
   const selectedRoute = levels.find((level) => level.id === selectedLevelId) ?? null;
   const isSelectedRouteUnlocked = selectedRoute ? selectedRoute.id <= highestUnlockedLevel : false;
+  const selectedRouteIndex = selectedRoute ? levels.findIndex((level) => level.id === selectedRoute.id) : Math.max(0, highestUnlockedLevel - 1);
+  const selectedRouteStatusLabel = !selectedRoute
+    ? 'Open atlas'
+    : selectedRoute.id > highestUnlockedLevel
+      ? 'Locked route'
+      : selectedRoute.id === highestUnlockedLevel
+        ? 'Frontier route'
+        : 'Route ready';
+  const selectedRouteStatusTone = !selectedRoute
+    ? 'border-cyan-200/20 bg-cyan-500/10 text-cyan-100'
+    : selectedRoute.id > highestUnlockedLevel
+      ? 'border-rose-200/20 bg-rose-500/10 text-rose-100'
+      : 'border-emerald-200/20 bg-emerald-500/10 text-emerald-100';
+  const menuActions = [
+    onOpenShop
+      ? {
+          label: 'Shop',
+          icon: <ShoppingBag size={12} />,
+          onClick: onOpenShop,
+          tone: 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100 hover:bg-cyan-500/18',
+        }
+      : null,
+    {
+      label: 'Boards',
+      icon: <Trophy size={12} />,
+      onClick: onOpenLeaderboard,
+      tone: 'border-amber-200/20 bg-amber-500/12 text-amber-100 hover:bg-amber-500/18',
+    },
+    onOpenStory
+      ? {
+          label: 'Story',
+          icon: <BookOpen size={12} />,
+          onClick: onOpenStory,
+          tone: 'border-fuchsia-200/20 bg-fuchsia-500/12 text-fuchsia-100 hover:bg-fuchsia-500/18',
+        }
+      : null,
+    {
+      label: 'Share',
+      icon: <Share2 size={12} />,
+      onClick: onShareRunboard,
+      tone: 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+    },
+    onOpenSettings
+      ? {
+          label: 'Settings',
+          icon: <Settings2 size={12} />,
+          onClick: onOpenSettings,
+          tone: 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+        }
+      : null,
+    onToggleMute
+      ? {
+          label: isMuted ? 'Muted' : 'Sound',
+          icon: isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />,
+          onClick: onToggleMute,
+          tone: 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+        }
+      : null,
+    onToggleFullscreen
+      ? {
+          label: isFullscreen ? 'Window' : 'Full',
+          icon: <Maximize2 size={12} />,
+          onClick: () => {
+            void onToggleFullscreen();
+          },
+          tone: 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+        }
+      : null,
+  ].filter((entry): entry is { label: string; icon: React.ReactNode; onClick: () => void | Promise<void>; tone: string } => Boolean(entry));
+  const atlasShortcutActions = menuActions
+    .filter((action) => ['Shop', 'Boards', 'Story', 'Share'].includes(action.label))
+    .map((action) => ({
+      ...action,
+      label: action.label === 'Story' ? 'Story Map' : action.label,
+      detail:
+        action.label === 'Shop'
+          ? 'Upgrade ropes, launch power, and survival kits.'
+          : action.label === 'Boards'
+            ? 'Check rival ladders, daily cups, and imported runs.'
+            : action.label === 'Story'
+              ? 'Open the comic-style route brief and crew lore.'
+              : 'Publish a route challenge or copy your board.',
+    }));
+  const systemActions = menuActions
+    .filter((action) => ['Settings', 'Sound', 'Muted', 'Full', 'Window'].includes(action.label))
+    .map((action) => ({
+      ...action,
+      detail:
+        action.label === 'Settings'
+          ? 'Tune controls, overlays, and session options.'
+          : action.label === 'Sound' || action.label === 'Muted'
+            ? 'Toggle the route mix and ambient camp audio.'
+            : 'Expand the atlas to a cleaner full-screen stage.',
+    }));
+  const isDockedCollapsed = variant === 'docked' && isCollapsed;
   const scrollToSidebarSection = (section: string) => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -516,9 +738,146 @@ export function ProgressSidebar({
     const target = container.querySelector<HTMLElement>(`[data-sidebar-section="${section}"]`);
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+  const atlasSectionActions = [
+    {
+      label: 'Overview',
+      detail: 'Quest progress, featured cups, and the active frontier.',
+      icon: <BookOpen size={12} />,
+      onClick: () => scrollToSidebarSection('overview'),
+      tone: 'border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]',
+    },
+    {
+      label: 'Routes',
+      detail: 'Unlocked branches, lock previews, and map depth.',
+      icon: <MapIcon size={12} />,
+      onClick: () => scrollToSidebarSection('routes'),
+      tone: 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100 hover:bg-cyan-500/18',
+    },
+    {
+      label: 'Rivals',
+      detail: 'Live lane pressure, imported boards, and route races.',
+      icon: <Trophy size={12} />,
+      onClick: () => scrollToSidebarSection('rivals'),
+      tone: 'border-fuchsia-200/20 bg-fuchsia-500/12 text-fuchsia-100 hover:bg-fuchsia-500/18',
+    },
+    {
+      label: 'Awards',
+      detail: 'Achievements, streaks, and tour completion markers.',
+      icon: <Star size={12} />,
+      onClick: () => scrollToSidebarSection('achievements'),
+      tone: 'border-amber-200/20 bg-amber-500/12 text-amber-100 hover:bg-amber-500/18',
+    },
+  ];
+
+  if (isDockedCollapsed) {
+    return (
+      <div data-ui-control className="pointer-events-none absolute inset-y-0 left-3 z-20 hidden py-3 xl:flex">
+        <div className="pointer-events-auto flex h-full w-[74px] flex-col items-center justify-between rounded-3xl border border-white/10 bg-slate-950/90 py-3 text-white backdrop-blur-2xl atlas-surface atlas-elevated">
+          <div className="flex flex-col items-center gap-2">
+            <div className={`rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-[0.24em] ${isAtlasFocusMode ? 'border-cyan-200/20 bg-cyan-500/12 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-white/70'}`}>
+              {isAtlasFocusMode ? 'Brief' : 'Atlas'}
+            </div>
+            <SidebarRailButton
+              label="Open Atlas Rail"
+              detail="Expand the left rail for routes, rivals, awards, and camp controls."
+              onClick={() => onToggleCollapsed?.()}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+              ariaLabel="Show campaign sidebar"
+            >
+              <ChevronRight size={16} />
+            </SidebarRailButton>
+          </div>
+
+          <div className={`w-[52px] rounded-2xl border px-2 py-2 text-center ${isAtlasFocusMode ? 'border-cyan-200/20 bg-cyan-500/10' : 'border-white/10 bg-white/[0.04]'}`}>
+            <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              {isAtlasFocusMode ? 'Focus' : 'Frontier'}
+            </div>
+            <div className="mt-1 text-lg font-black leading-none text-white">
+              L{selectedRoute?.id ?? highestUnlockedLevel}
+            </div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-950/70">
+              <div
+                className={`h-full rounded-full ${isAtlasFocusMode ? 'bg-cyan-300' : 'bg-emerald-300'}`}
+                style={{ width: `${Math.max(0, Math.min(100, Math.round((highestUnlockedLevel / Math.max(1, levels.length)) * 100)))}%` }}
+              />
+            </div>
+            <div className="mt-1 space-y-0.5 text-[8px] uppercase tracking-[0.16em] text-white/50">
+              <div>{unlockedAchievementCount}/{achievements.length} awards</div>
+              <div>{currentStreak} streak</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-2 px-2">
+            <SidebarRailButton
+              label={`Focus L${selectedRoute?.id ?? highestUnlockedLevel}`}
+              detail={selectedRoute ? `${selectedRoute.name}. Jump the map back to your selected route.` : 'Center on your current frontier route.'}
+              onClick={() => {
+                if (!selectedRoute) return;
+                onSelectLevel(selectedRoute.id);
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200/20 bg-emerald-500/12 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100 transition-colors hover:bg-emerald-500/18"
+            >
+              L{selectedRoute?.id ?? highestUnlockedLevel}
+            </SidebarRailButton>
+            {onOpenShop ? (
+              <SidebarRailButton
+                label="Shop"
+                detail="Open the bazaar and retune rope, launch, survival, and cosmetics."
+                onClick={onOpenShop}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                ariaLabel="Open shop"
+              >
+                <ShoppingBag size={15} />
+              </SidebarRailButton>
+            ) : null}
+            <SidebarRailButton
+              label="Boards"
+              detail="View leaderboard pressure, rival routes, and imported crew standings."
+              onClick={onOpenLeaderboard}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+              ariaLabel="Open boards"
+            >
+              <Trophy size={15} />
+            </SidebarRailButton>
+            {onOpenStory ? (
+              <SidebarRailButton
+                label="Story Map"
+                detail="Open the campaign story overlay and inspect route beats in sequence."
+                onClick={onOpenStory}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                ariaLabel="Open story"
+              >
+                <BookOpen size={15} />
+              </SidebarRailButton>
+            ) : null}
+            {onToggleMute ? (
+              <SidebarRailButton
+                label={isMuted ? 'Unmute' : 'Sound'}
+                detail={isMuted ? 'Turn interface and route audio back on.' : 'Mute interface and route audio.'}
+                onClick={onToggleMute}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                ariaLabel={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              </SidebarRailButton>
+            ) : null}
+          </div>
+
+          <SidebarRailButton
+            label="Expand Rail"
+            detail="Show the full campaign rail with route list, rival highlights, and awards."
+            onClick={() => onToggleCollapsed?.()}
+            className="mb-1 inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70 transition-colors hover:bg-white/[0.08]"
+          >
+            Show
+          </SidebarRailButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={containerClassName}>
+    <div data-ui-control className={containerClassName}>
       {variant === 'drawer' ? (
         <button
           type="button"
@@ -547,54 +906,162 @@ export function ProgressSidebar({
 
         <div
           ref={scrollContainerRef}
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pr-1"
+          className="atlas-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-4 pr-1"
         >
           <div data-sidebar-section="overview" className="scroll-mt-4">
             <div className="rounded-2xl border border-emerald-200/20 bg-emerald-500/8 p-2.5">
-              <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/55">Infinite Swinger</div>
-              <div className="atlas-map-label text-[10px] uppercase tracking-[0.2em] text-emerald-100">Campaign Atlas</div>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="atlas-map-label text-[9px] uppercase tracking-[0.22em] text-white/55">Infinite Swinger</div>
+                  <div className="atlas-map-label text-[10px] uppercase tracking-[0.2em] text-emerald-100">Campaign Atlas</div>
+                </div>
+                {variant === 'docked' && onToggleCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={onToggleCollapsed}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition-colors hover:bg-white/[0.08]"
+                    aria-label="Hide campaign sidebar"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                ) : null}
+              </div>
               <div className="mt-2 font-black text-base uppercase tracking-[0.16em] text-emerald-100">Progress & Achievements</div>
               <div className="mt-1 text-[11px] text-slate-300">{formatRunsText(runHistory)}</div>
             </div>
 
-            <div className="sticky top-0 z-10 mt-3 rounded-2xl border border-white/10 bg-slate-950/88 p-2.5 backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.22em] text-white/45">
-                <span>Atlas shortcuts</span>
-                <span>{contestedRouteCount} contested</span>
+            <div className="relative z-0 mt-3 rounded-2xl border border-white/10 bg-slate-950/88 p-2.5 backdrop-blur-xl">
+              <div className="rounded-2xl border border-cyan-200/18 bg-cyan-500/[0.08] p-2.5">
+                <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.22em] text-white/45">
+                  <span>Route browser</span>
+                  <span>{selectedRouteIndex + 1}/{levels.length}</span>
+                </div>
+                <div className="mt-1 text-sm font-black text-white">
+                  {selectedRoute ? `L${selectedRoute.id} ${selectedRoute.name}` : 'Choose a route'}
+                </div>
+                <div className={`mt-1 inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${selectedRouteStatusTone}`}>
+                  {selectedRouteStatusLabel}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={onPreviousRoute}
+                    disabled={!onPreviousRoute || selectedRouteIndex <= 0}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label="Previous route"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCenterSelected}
+                    disabled={!onCenterSelected}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label="Center selected route"
+                  >
+                    <LocateFixed size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onNextRoute}
+                    disabled={!onNextRoute || selectedRouteIndex >= levels.length - 1}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label="Next route"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+                {(onZoomOut || onResetView || onZoomIn) ? (
+                  <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={onZoomOut}
+                      disabled={!onZoomOut}
+                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onResetView}
+                      disabled={!onResetView}
+                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onZoomIn}
+                      disabled={!onZoomIn}
+                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => scrollToSidebarSection('overview')}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/[0.08]"
-                >
-                  <BookOpen size={11} />
-                  Overview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSidebarSection('routes')}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-200/20 bg-cyan-500/12 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition-colors hover:bg-cyan-500/18"
-                >
-                  <Map size={11} />
-                  Routes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSidebarSection('rivals')}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-fuchsia-200/20 bg-fuchsia-500/12 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fuchsia-100 transition-colors hover:bg-fuchsia-500/18"
-                >
-                  <Trophy size={11} />
-                  Rivals
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSidebarSection('achievements')}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200/20 bg-amber-500/12 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-100 transition-colors hover:bg-amber-500/18"
-                >
-                  <Star size={11} />
-                  Awards
-                </button>
+
+              <div className="mt-2 space-y-2.5">
+                {atlasShortcutActions.length > 0 ? (
+                  <div className="rounded-2xl border border-cyan-200/14 bg-cyan-500/[0.05] p-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.22em] text-white/45">
+                      <span>Atlas access</span>
+                      <span>{atlasShortcutActions.length} live</span>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      {atlasShortcutActions.map((action) => (
+                        <SidebarPanelAction
+                          key={action.label}
+                          label={action.label}
+                          detail={action.detail}
+                          icon={action.icon}
+                          onClick={action.onClick}
+                          tone={action.tone}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {systemActions.length > 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.22em] text-white/45">
+                      <span>Camp systems</span>
+                      <span>ready</span>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      {systemActions.map((action) => (
+                        <SidebarPanelAction
+                          key={action.label}
+                          label={action.label}
+                          detail={action.detail}
+                          icon={action.icon}
+                          onClick={action.onClick}
+                          tone={action.tone}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                  <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.22em] text-white/45">
+                    <span>Atlas sections</span>
+                    <span>{contestedRouteCount} contested</span>
+                  </div>
+                  <div className="mt-2 space-y-1.5">
+                    {atlasSectionActions.map((action) => (
+                      <SidebarPanelAction
+                        key={action.label}
+                        label={action.label}
+                        detail={action.detail}
+                        icon={action.icon}
+                        onClick={action.onClick}
+                        tone={action.tone}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -680,7 +1147,7 @@ export function ProgressSidebar({
           <div className="mt-3 rounded-2xl border border-sky-200/20 bg-sky-500/8 p-2">
             <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.16em] text-sky-100/90">
               <span className="inline-flex items-center gap-1.5">
-                <Map size={12} />
+                <MapIcon size={12} />
                 Atlas Expansion
               </span>
               <span className="atlas-chip rounded-full px-2 py-1 text-[10px] text-slate-200">
@@ -699,7 +1166,7 @@ export function ProgressSidebar({
                   <div key={milestone.id} className={`rounded-xl border px-2.5 py-2 ${milestone.tone}`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="inline-flex items-center gap-1.5">
-                        {isImmediateNext || isCurrentGate ? <AlertTriangle size={12} /> : <Map size={12} />}
+                        {isImmediateNext || isCurrentGate ? <AlertTriangle size={12} /> : <MapIcon size={12} />}
                         <span className="text-sm font-bold text-white">L{milestone.levelId} • {milestone.levelName}</span>
                       </div>
                       <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-white/85">
@@ -747,7 +1214,7 @@ export function ProgressSidebar({
           <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
             <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.16em] text-cyan-200/90">
               <span className="inline-flex items-center gap-1.5">
-                <Map size={12} />
+                <MapIcon size={12} />
                 Route List
               </span>
               <span className="atlas-chip rounded-full px-2 py-1 text-[10px] text-slate-200">{unlockedRuns.length}/{levels.length}</span>
@@ -766,90 +1233,100 @@ export function ProgressSidebar({
                 <div className="mt-1 text-sm font-black text-white">{routeTrailCount}</div>
               </div>
             </div>
-            <div className="max-h-56 space-y-1 overflow-y-auto pr-1 text-[11px]">
+            <div className="atlas-scroll max-h-[22rem] space-y-1 overflow-y-auto pr-1 text-[11px]">
               {levels.map((level) => {
                 const isSelected = level.id === selectedLevelId;
                 const isUnlocked = level.id <= highestUnlockedLevel;
                 const result = levelResults[String(level.id)] ?? null;
                 const clears = result?.clears ?? 0;
                 const stars = result?.stars ?? 0;
+                const bestScore = result?.bestScore ?? 0;
                 const isCleared = clears > 0;
                 const routeControl = routeControlEntries.find((entry) => entry.levelId === level.id) ?? null;
+                const statusLabel = !isUnlocked
+                  ? 'Locked'
+                  : isSelected
+                    ? 'Focused'
+                    : isCleared
+                      ? 'Cleared'
+                      : level.id === highestUnlockedLevel
+                        ? 'Current'
+                        : 'Open';
+                const statusTone = !isUnlocked
+                  ? 'border-white/10 bg-white/[0.04] text-white/55'
+                  : isSelected
+                    ? 'border-emerald-200/25 bg-emerald-500/12 text-emerald-100'
+                    : isCleared
+                      ? 'border-cyan-200/18 bg-cyan-500/10 text-cyan-100'
+                      : 'border-amber-200/18 bg-amber-500/10 text-amber-100';
+                const routeSummary = !isUnlocked
+                  ? `Preview locked branch. Clear L${level.id - 1} to launch it.`
+                  : isCleared
+                    ? `Best ${bestScore} pts • ${clears} clear${clears === 1 ? '' : 's'}`
+                    : level.id === highestUnlockedLevel
+                      ? 'Current gate route • no attempts yet'
+                      : 'Open lane • no attempts yet';
 
                 return (
-                  <button
+                  <div
                     key={level.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-disabled={false}
                     onClick={() => {
-                      if (!isUnlocked) return;
                       onSelectLevel(level.id);
                       if (variant === 'drawer') {
                         onClose?.();
                       }
                     }}
-                    disabled={!isUnlocked}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      onSelectLevel(level.id);
+                      if (variant === 'drawer') {
+                        onClose?.();
+                      }
+                    }}
                     className={`w-full rounded-xl border px-2.5 py-2 text-left transition-all ${
                       isSelected
                         ? 'border-emerald-300/40 bg-emerald-500/18'
                         : 'border-white/10 bg-white/[0.03] hover:border-cyan-300/35 hover:bg-white/[0.06]'
-                    } ${!isUnlocked ? 'cursor-not-allowed opacity-70' : ''}`}
+                    } ${!isUnlocked ? 'border-rose-200/12 bg-rose-500/[0.03]' : ''}`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="inline-flex items-center gap-1.5">
-                        {isUnlocked ? <Flag size={11} /> : <Lock size={11} />}
-                        <span className="font-semibold text-white">Lv {level.id}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="inline-flex max-w-full items-center gap-1.5">
+                          {isUnlocked ? <Flag size={11} /> : <Lock size={11} />}
+                          <span className="font-semibold text-white">L{level.id}</span>
+                          <span className="truncate text-white/88">{level.name}</span>
+                        </div>
+                        <div className="mt-1 truncate text-[10px] text-white/55">{routeSummary}</div>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-white/75">
-                        <span>{isCleared ? <CheckCircle2 size={12} /> : null}</span>
-                        <span className="text-[10px]">{clears}×</span>
-                      </div>
+                      <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${statusTone}`}>
+                        {statusLabel}
+                      </span>
                     </div>
-                    <div className="mt-1 truncate text-white/85">{level.name}</div>
-                    <div className="mt-1 flex items-center justify-between text-[10px] text-white/55">
-                      <span>{isUnlocked ? `${level.difficulty} • ${level.biome}` : 'Locked by progress'}</span>
-                      {isUnlocked ? starRow(stars) : null}
+                    <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-white/55">
+                      <span className="truncate">{isUnlocked ? `${level.biome} • danger ${level.difficulty + 1}/10` : 'Locked by progress'}</span>
+                      {isUnlocked ? (
+                        <span className="inline-flex items-center gap-1.5 text-white/75">
+                          {isCleared ? <CheckCircle2 size={12} /> : null}
+                          <span>{clears}x</span>
+                          {starRow(stars)}
+                        </span>
+                      ) : null}
                     </div>
                     {isUnlocked && routeControl ? (
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-slate-950/55 px-2 py-1.5">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${routeControl.tone}`}>
                           {routeControl.label}
                         </span>
-                        <span className="min-w-0 truncate text-right text-[9px] uppercase tracking-[0.12em] text-white/45">
+                        <span className="min-w-0 truncate text-right text-[9px] uppercase tracking-[0.12em] text-white/42">
                           {routeControl.detail}
                         </span>
                       </div>
                     ) : null}
-                    {isUnlocked && (onShareRouteChallenge || onCopyRouteChallenge) ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {onShareRouteChallenge ? (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onShareRouteChallenge(level.id);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full border border-cyan-200/25 bg-cyan-500/12 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-100 transition-colors hover:bg-cyan-500/18"
-                          >
-                            <Share2 size={11} />
-                            Challenge
-                          </button>
-                        ) : null}
-                        {onCopyRouteChallenge ? (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onCopyRouteChallenge(level.id);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full border border-fuchsia-200/25 bg-fuchsia-500/12 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-fuchsia-100 transition-colors hover:bg-fuchsia-500/18"
-                          >
-                            <Copy size={11} />
-                            Copy
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {!isUnlocked ? <p className="mt-1 text-[10px] text-amber-200/80">Locked</p> : null}
-                  </button>
+                  </div>
                 );
               })}
             </div>

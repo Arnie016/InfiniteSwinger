@@ -49,7 +49,7 @@ export type MenuParallax = 'off' | 'on';
 export type SettingsTab = 'General' | 'Audio' | 'Display' | 'Swing Lab' | 'Data';
 export type AssetVariantKind = 'image' | 'audio' | 'procedural';
 export type AssetFallbackMode = 'procedural' | 'bundled' | 'silent';
-export type RopeType = 'vine' | 'braid' | 'chain' | 'silk';
+export type RopeType = 'vine' | 'braid' | 'chain' | 'silk' | 'reed' | 'ember';
 export type StoryRevealAction =
   | 'focus_camp'
   | 'reveal_path'
@@ -58,7 +58,7 @@ export type StoryRevealAction =
   | 'show_goal';
 export type StoryRevealScope = 'camp' | 'segment' | 'region' | 'full_route';
 export type CameraEasing = 'linear' | 'easeOut' | 'easeInOut';
-export type StoryCastId = 'nara' | 'ivo' | 'pell' | 'suri' | 'chorus' | 'lyra' | 'kellan';
+export type StoryCastId = 'nara' | 'ivo' | 'pell' | 'suri' | 'chorus' | 'lyra' | 'kellan' | 'relay';
 export type PlayerMoodPreset = 'Relaxed' | 'Balanced' | 'Aggressive' | 'Precision' | 'Custom';
 export type SettingSafetyState = 'Safe' | 'Caution' | 'Unstable';
 export type ShopPresentationGroup = 'Rope Types' | 'Rope Control' | 'Launch & Recovery' | 'Survival & Utility' | 'Cosmetics';
