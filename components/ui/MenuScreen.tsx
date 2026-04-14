@@ -221,6 +221,7 @@ type Props = {
   hasCompletedStoryIntro: boolean;
   isMuted: boolean;
   isFullscreen: boolean;
+  isPreviewLocked: boolean;
   currentBuild: CurrentBuildSummary;
   weatherLabels: Record<WeatherType, string>;
   enemyLabels: Record<Enemy['enemyType'], string>;
@@ -245,6 +246,7 @@ export function MenuScreen({
   hasCompletedStoryIntro,
   isMuted,
   isFullscreen,
+  isPreviewLocked,
   currentBuild,
   weatherLabels,
   enemyLabels,
@@ -277,7 +279,7 @@ export function MenuScreen({
         <h1 className="atlas-title mt-2 text-[1.56rem] leading-[0.92] text-white">Infinite Swinger</h1>
         <p className="atlas-panel-copy mt-1.5 text-[0.86rem] text-slate-200">Inspect. Launch. Explore.</p>
         <div className="atlas-surface-soft mt-3 rounded-2xl px-3 py-2 text-[0.8rem] text-slate-200">
-          Drag to roam. Double click starts.
+          {isPreviewLocked ? 'Preview locked. Center when you want the route back.' : 'Drag to roam. Double click starts.'}
         </div>
         <div className="mt-3 grid grid-cols-3 gap-1.5">
           <button
@@ -382,6 +384,12 @@ export function MenuScreen({
                   {selectedLevelLocked ? <Lock size={15} /> : <CheckCircle2 size={15} />}
                   {selectedLevelLocked ? 'Locked' : 'Ready'}
                 </span>
+                {isPreviewLocked ? (
+                  <span className="atlas-chip inline-flex items-center gap-2 rounded-full border-cyan-200/15 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-100">
+                    <Anchor size={15} />
+                    Preview locked
+                  </span>
+                ) : null}
                 <span className="atlas-chip inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold text-slate-100">
                   <BiomeIcon biome={selectedLevel.biome} />
                   {selectedLevel.biome}
@@ -459,14 +467,16 @@ export function MenuScreen({
 
             <div className="flex h-full flex-col justify-between gap-2 atlas-surface-soft rounded-[1.1rem] p-2">
               <div>
-                <div className="atlas-map-label text-[10px] text-slate-400">Launch</div>
-                <div className="atlas-panel-copy mt-1 text-[0.7rem] text-slate-300">Center or launch.</div>
+                <div className="atlas-map-label text-[10px] text-slate-400">{isPreviewLocked ? 'Preview lock' : 'Launch'}</div>
+                <div className="atlas-panel-copy mt-1 text-[0.7rem] text-slate-300">
+                  {isPreviewLocked ? 'Inspect routes without camera snapback. Recenter when ready.' : 'Center or launch.'}
+                </div>
                 <button
                   onClick={onCenterSelected}
                   className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/72 px-3 py-1.5 text-[10px] font-semibold text-slate-100 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-500"
                 >
                   <Map size={14} />
-                  Center
+                  {isPreviewLocked ? 'Recenter route' : 'Center'}
                 </button>
               </div>
               <button
