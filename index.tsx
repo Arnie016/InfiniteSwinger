@@ -11,7 +11,16 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 
-registerSW({ immediate: true });
+if (import.meta.env.DEV) {
+  void navigator.serviceWorker
+    ?.getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+    .catch((error) => {
+      console.warn('Failed to clear service workers during local dev', error);
+    });
+} else {
+  registerSW({ immediate: true });
+}
 
 root.render(
   <React.StrictMode>
