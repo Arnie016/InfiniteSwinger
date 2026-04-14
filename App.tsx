@@ -610,6 +610,7 @@ export default function App() {
   const [isInvincible, setIsInvincible] = useState(false);
   const [playerLives, setPlayerLives] = useState(MAX_LIVES);
   const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
+  const [isMenuPreviewLocked, setIsMenuPreviewLocked] = useState(false);
   const [tutorial, setTutorial] = useState<TutorialState>({ active: false, currentStep: 'WELCOME', showBox: false, message: "" });
   const [hideTutorialTips, setHideTutorialTips] = useState(false);
   const [activeTab, setActiveTab] = useState<'UPGRADES' | 'ROPES' | 'SKINS'>('UPGRADES');
@@ -810,6 +811,11 @@ export default function App() {
       setShowSettings(true);
   }, []);
 
+  const updateMenuCameraControlMode = useCallback((mode: 'auto' | 'manual') => {
+      menuCameraControlModeRef.current = mode;
+      setIsMenuPreviewLocked(gameStateRef.current === GameState.MENU && mode === 'manual');
+  }, []);
+
   const enableManualMenuCameraControl = useCallback(() => {
       if (gameStateRef.current === GameState.PLAYING || menuCameraControlModeRef.current === 'manual') return;
       const storyBeat = INTRO_STORY_SEQUENCE.beats[storyBeatIndexRef.current] ?? INTRO_STORY_SEQUENCE.beats[0];
@@ -826,8 +832,8 @@ export default function App() {
       menuCameraZoomOffsetRef.current = clamp(currentCamera.zoom - baseTarget.zoom, -0.2, 0.18);
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuFocusTransitionRef.current = null;
-      menuCameraControlModeRef.current = 'manual';
-  }, []);
+      updateMenuCameraControlMode('manual');
+  }, [updateMenuCameraControlMode]);
 
   const handleSelectLevel = useCallback((levelId: number, options?: { focus?: boolean }) => {
       const focus = options?.focus ?? false;
@@ -849,7 +855,7 @@ export default function App() {
               zoom: lerpNumber(currentCamera.zoom, focusTarget.zoom, 0.22),
           });
           menuMapCameraRef.current = immediateCamera;
-          menuCameraControlModeRef.current = 'auto';
+          updateMenuCameraControlMode('auto');
           menuFocusTransitionRef.current = {
               from: { ...immediateCamera },
               to: focusTarget,
@@ -869,7 +875,7 @@ export default function App() {
               lastSelectedLevelId: levelId,
           };
       });
-  }, [commitSaveData]);
+  }, [commitSaveData, updateMenuCameraControlMode]);
 
   const adjustMenuZoom = useCallback((delta: number) => {
       if (gameStateRef.current === GameState.PLAYING) return;
@@ -896,10 +902,10 @@ export default function App() {
       menuPanOffsetRef.current = { x: 0, y: 0 };
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuCameraZoomOffsetRef.current = 0;
-      menuCameraControlModeRef.current = 'auto';
+      updateMenuCameraControlMode('auto');
       if (gameStateRef.current === GameState.PLAYING) return;
       handleSelectLevel(selectedLevelId ?? selectedLevelRef.current, { focus: true });
-  }, [handleSelectLevel, selectedLevelId]);
+  }, [handleSelectLevel, selectedLevelId, updateMenuCameraControlMode]);
 
   const completeStoryIntro = useCallback(() => {
       setStoryBeatIndex(0);
@@ -909,14 +915,14 @@ export default function App() {
       menuPanOffsetRef.current = { x: 0, y: 0 };
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuCameraZoomOffsetRef.current = 0;
-      menuCameraControlModeRef.current = 'auto';
+      updateMenuCameraControlMode('auto');
       commitSaveData((prev) => ({
           ...prev,
           hasCompletedStoryIntro: true,
           lastSelectedLevelId: 1,
       }));
       setGameState(GameState.MENU);
-  }, [commitSaveData, handleSelectLevel]);
+  }, [commitSaveData, handleSelectLevel, updateMenuCameraControlMode]);
 
   const openStoryMap = useCallback(() => {
       setShowSettings(false);
@@ -928,9 +934,9 @@ export default function App() {
       menuPanOffsetRef.current = { x: 0, y: 0 };
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuCameraZoomOffsetRef.current = 0;
-      menuCameraControlModeRef.current = 'auto';
+      updateMenuCameraControlMode('auto');
       setGameState(GameState.STORY_MAP);
-  }, []);
+  }, [updateMenuCameraControlMode]);
 
   const returnToMainMenu = useCallback(() => {
       setIsPaused(false);
@@ -940,9 +946,9 @@ export default function App() {
       menuDragRef.current.dragged = false;
       menuPanVelocityRef.current = { x: 0, y: 0 };
       menuFocusTransitionRef.current = null;
-      menuCameraControlModeRef.current = 'auto';
+      updateMenuCameraControlMode('auto');
       handleSelectLevel(selectedLevelRef.current, { focus: true });
-  }, [handleSelectLevel]);
+  }, [handleSelectLevel, updateMenuCameraControlMode]);
 
   const handleLandingPlay = useCallback(() => {
       if (saveDataRef.current.hasCompletedStoryIntro) {
@@ -5508,7 +5514,10 @@ export default function App() {
               if (!dragState.dragged && pointer && currentGameState === GameState.MENU) {
                   const mapPoint = screenPointToMenuMapWorld(pointer.x, pointer.y, menuMapCameraRef.current);
                   const level = getLevelAtMapPoint(mapPoint.x, mapPoint.y);
-                  if (level) handleSelectLevel(level.id, { focus: true });
+                  if (level) {
+                      const preservePreviewLock = menuCameraControlModeRef.current === 'manual';
+                      handleSelectLevel(level.id, { focus: !preservePreviewLock });
+                  }
               }
               dragState.active = false;
               dragState.dragged = false;
@@ -5531,7 +5540,10 @@ export default function App() {
               const mapPoint = screenPointToMenuMapWorld(pointer.x, pointer.y, menuMapCameraRef.current);
               const hoveredLevelId = getLevelAtMapPoint(mapPoint.x, mapPoint.y)?.id ?? hoveredLevelRef.current ?? selectedLevelRef.current;
               if (!hoveredLevelId) return;
-              if (selectedLevelRef.current !== hoveredLevelId) handleSelectLevel(hoveredLevelId, { focus: true });
+              if (selectedLevelRef.current !== hoveredLevelId) {
+                  const preservePreviewLock = menuCameraControlModeRef.current === 'manual';
+                  handleSelectLevel(hoveredLevelId, { focus: !preservePreviewLock });
+              }
               if (hoveredLevelId <= Math.min(saveData.maxLevelReached, LEVELS.length)) {
                   startGame(hoveredLevelId);
               }
@@ -6184,6 +6196,7 @@ export default function App() {
             hasCompletedStoryIntro={saveData.hasCompletedStoryIntro}
             isMuted={isMuted}
             isFullscreen={isFullscreen}
+            isPreviewLocked={isMenuPreviewLocked}
             currentBuild={currentBuildSummary}
             weatherLabels={WEATHER_LABELS}
             enemyLabels={ENEMY_LABELS}
